@@ -18,7 +18,7 @@ filterwarnings = [
     'ignore::DeprecationWarning:geopandas._compat'
 ]
 [project]
-name = "ngiab_data_preprocess"
+name = "forecast_data_overlay"
 #version = "0.0.1"
 dynamic = ["version"]
 authors = [
