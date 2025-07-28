@@ -315,6 +315,6 @@ input[type="datetime-local"] {
   }
 
   input[type="datetime-local"] {
-      width: 100%;
+      width: calc(100% - 2 * 12px); /* Full width minus padding */
   }
 }

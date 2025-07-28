@@ -41,12 +41,16 @@ def load_dataset_from_json(file_path: str) -> xr.Dataset:
             "fo": data,
         },
     }
-    return xr.open_dataset(
+    ds = xr.open_dataset(
         'reference://',
         engine='zarr',
         backend_kwargs=backend_args,
         chunks="auto",
     )
+    ds_df = ds.RAINRATE[:, 0:2000, 0:2000].to_dataframe()
+    # ds_df = ds.RAINRATE.to_dataframe()
+    # ds_df = ds.to_dataframe()
+    return ds
     
 
 def load_datasets(
@@ -83,7 +87,8 @@ def load_datasets_parallel(
     os.makedirs("./dist/joblib_temp", exist_ok=True)
     with joblib.parallel_config(
         n_jobs=num_cores,
-        backend='threading',
+        # backend='threading',
+        backend='loky',
         temp_folder="./dist/joblib_temp",
     ):
         datasets = joblib.Parallel()(
@@ -203,27 +208,54 @@ if __name__ == "__main__":
     import time
     # Example usage
     start_date = "202301010000" # January 1, 2023
-    end_date = "202301020000" # January 2, 2023
+    end_date = "202301010000" # January 2, 2023
     t0 = time.perf_counter()
     datasets = load_forecasted_forcings(
         start_date=start_date,
         end_date=end_date,
         # fcst_cycle=[0, 6, 12, 18],
         # lead_times=[1, 2, 3],
-        fcst_cycle=[0],
+        # fcst_cycle=[0],
+        # fcst_cycle=list(range(0, 5)),
+        fcst_cycle=list(range(0, 24)),
         lead_times=[1],
         parallel=True,
     )
     t1 = time.perf_counter()
     print(f"Loaded {len(datasets)} datasets in {t1 - t0:.2f} seconds")
+    def timetest_grab_ns(num: int)->int:
+        before = time.perf_counter_ns()
+        test_date = "202301010000"
+        test_dataset = load_forecasted_forcings(
+            start_date=test_date,
+            end_date=test_date,
+            fcst_cycle=list(range(0, num + 1)),
+            lead_times=[1],
+            parallel=True,
+        )
+        after = time.perf_counter_ns()
+        print(f"Finished loading {num}")
+        return after - before
+    timetests = [timetest_grab_ns(i) for i in range(0, 24)]
+    from matplotlib import pyplot as plt
+    timetests = [i / 1e6 for i in timetests]  # Convert to milliseconds
+    plt.plot(timetests)
+    plt.xlabel("Number of Forecast Cycles")
+    plt.ylabel("Time (ms)")
+    plt.title("Time to Load Forecasted Forcings vs. Number of Forecast Cycles")
+    plt.grid()
+    plt.savefig("dist/forecasted_forcings_load_time.png")
+        
+        
+        
     # print(datasets[0])  # Print the first dataset for verification
     # print(datasets[1])  # Print the first dataset for verification
     
     # Check that single dataset loading works
-    single_dataset = load_forecasted_forcing(
-        date="202301010000",
-    )
-    print(f"Single dataset loaded: {single_dataset}")
+    # single_dataset = load_forecasted_forcing(
+    #     date="202301010000",
+    # )
+    # print(f"Single dataset loaded: {single_dataset}")
     
     # print(f"Merging datasets...")
     # t2 = time.perf_counter()
