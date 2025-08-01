@@ -23,10 +23,11 @@
     <main>
         <section id="map-container">
             <div id="map">
-                <button id="toggle-button-gages">Show gages</button> 
+                <button id="toggle-button-gages">Show gages</button>
                 <button id="toggle-button-camels">Show CAMELS basins</button>
                 <button id="toggle-button-nwm">Overlay NWM chunks</button>
                 <button id="toggle-button-aorc">Overlay AORC chunks</button>
+                <button id="toggle-button-forecast">Show Forecast Data</button>
             </div>
 
             <!-- <div class="command-container">
@@ -99,13 +100,39 @@
 
         <section id="time-settings">
             <div class="time-input">
-                <label for="start-time">Start Time:</label>
-                <input type="datetime-local" id="start-time" name="start-time" value="2010-01-01T00:00">
+                <label for="target-time">Target Time:</label>
+                <input type="datetime-local" id="target-time" name="target-time" value="2010-01-01T00:00">
             </div>
-            <div class="time-input">
-                <label for="end-time">End Time:</label>
-                <input type="datetime-local" id="end-time" name="end-time" value="2010-01-02T00:00">
+            <div class="lead-time-input">
+                <label for="lead-time">Lead Time (hours):</label>
+                <input type="range" id="lead-time" name="lead-time" value="1" min="1" max="18" step="1">
+                <span id="lead-time-value">1</span>
+                <script>
+                    document.getElementById('lead-time-value').textContent = document.getElementById('lead-time').value;
+                    document.getElementById('lead-time').addEventListener('input', function () {
+                        document.getElementById('lead-time-value').textContent = this.value;
+                    });
+                </script>
             </div>
+            <div class="forecast-cycle-input">
+                <label for="forecast-cycle">Forecast Cycle:</label>
+                <input type="range" id="forecast-cycle" name="forecast-cycle" value="0" min="0" max="23" step="1">
+                <span id="forecast-cycle-value">0</span>
+                <script>
+                    document.getElementById('forecast-cycle-value').textContent = document.getElementById('forecast-cycle').value;
+                    document.getElementById('forecast-cycle').addEventListener('input', function () {
+                        document.getElementById('forecast-cycle-value').textContent = this.value;
+                    });
+                </script>
+            </div>
+            <div class="selected-values" style="outline: 1px solid #ccc; padding: 3px; margin-top: 10px;">
+                <!--Display the values as they were when the `set-time` button was last pressed-->
+                <!--The user must press the button for this section to be populated-->
+                <p>Selected Time: <span id="selected-time">None</span></p>
+                <p>Selected Lead Time: <span id="selected-lead-time">None</span></p>
+                <p>Selected Forecast Cycle: <span id="selected-forecast-cycle">None</span></p>
+            </div>
+            <button id="set-time">Set Time</button>
         </section>
 
     </main>

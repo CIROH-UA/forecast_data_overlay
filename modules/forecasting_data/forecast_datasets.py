@@ -1,4 +1,9 @@
 from __future__ import annotations
+
+if __name__ == "__main__":
+    import sys
+
+    sys.path.append("./modules/")
 from typing import List, Optional, Dict
 import xarray as xr
 import fsspec
@@ -6,7 +11,8 @@ import ujson
 import psutil
 import joblib
 import os
-from kerchunk.combine import MultiZarrToZarr
+
+# from kerchunk.combine import MultiZarrToZarr
 import glob
 
 from forecasting_data.urlgen_enums import NWMRun, NWMVar, NWMGeo, NWMMem
@@ -23,17 +29,18 @@ from data_processing.dask_utils import use_cluster
 #     with fs2.open("/home/shared/GOES_DA/swe_new/combined.json", "wb") as f:
 #         f.write(ujson.dumps(d).encode())
 
+
 def load_dataset_from_json(file_path: str) -> xr.Dataset:
     """
     Load an xarray Dataset from a JSON file.
-    
+
     Args:
         file_path (str): Path to the JSON file containing dataset metadata.
-    
+
     Returns:
         xr.Dataset: Loaded xarray Dataset.
     """
-    with fsspec.open(file_path, 'r') as f:
+    with fsspec.open(file_path, "r") as f:
         data = ujson.load(f)
     backend_args = {
         "consolidated": False,
@@ -42,8 +49,8 @@ def load_dataset_from_json(file_path: str) -> xr.Dataset:
         },
     }
     ds = xr.open_dataset(
-        'reference://',
-        engine='zarr',
+        "reference://",
+        engine="zarr",
         backend_kwargs=backend_args,
         chunks="auto",
     )
@@ -51,17 +58,17 @@ def load_dataset_from_json(file_path: str) -> xr.Dataset:
     # ds_df = ds.RAINRATE.to_dataframe()
     # ds_df = ds.to_dataframe()
     return ds
-    
+
 
 def load_datasets(
     file_paths: List[str],
 ) -> List[xr.Dataset]:
     """
     Load multiple datasets from a list of file paths.
-    
+
     Args:
         file_paths (List[str]): List of file paths to the datasets.
-    
+
     Returns:
         List[xr.Dataset]: List of loaded xarray Datasets.
     """
@@ -71,15 +78,16 @@ def load_datasets(
         datasets.append(dataset)
     return datasets
 
+
 def load_datasets_parallel(
     file_paths: List[str],
 ) -> List[xr.Dataset]:
     """
     Load multiple datasets in parallel from a list of file paths.
-    
+
     Args:
         file_paths (List[str]): List of file paths to the datasets.
-    
+
     Returns:
         List[xr.Dataset]: List of loaded xarray Datasets.
     """
@@ -88,13 +96,14 @@ def load_datasets_parallel(
     with joblib.parallel_config(
         n_jobs=num_cores,
         # backend='threading',
-        backend='loky',
+        backend="loky",
         temp_folder="./dist/joblib_temp",
     ):
         datasets = joblib.Parallel()(
             joblib.delayed(load_dataset_from_json)(file_path) for file_path in file_paths
         )
     return datasets
+
 
 def load_forecasted_forcings(
     start_date: str,
@@ -108,11 +117,11 @@ def load_forecasted_forcings(
 ) -> List[xr.Dataset]:
     """
     Load forecasted forcing datasets as zarr files for a specified date range.
-    
+
     Args:
         start_date (str): Start date in 'YYYYMMDD' format.
         end_date (str): End date in 'YYYYMMDD' format.
-    
+
     Returns:
         List[xr.Dataset]: List of xarray Datasets containing the forecasted forcings.
     """
@@ -137,13 +146,14 @@ def load_forecasted_forcings(
     )
     # Append .json to the file urls
     file_list = append_jsons(file_list)
-    
+
     # Load the datasets from the file list
     if parallel:
         datasets = load_datasets_parallel(file_list)
     else:
         datasets = load_datasets(file_list)
     return datasets
+
 
 def load_forecasted_forcing(
     date: str,
@@ -167,6 +177,9 @@ def load_forecasted_forcing(
     """
     if not date:
         raise ValueError("Date must be provided.")
+    print(
+        f"Preparing to load forecasted forcing for date: {date}, cycle: {fcst_cycle}, lead time: {lead_time}"
+    )
     # Create a file list for the specified date, forecast cycle, and lead time
     file_list = create_default_file_list(
         runinput=runtype,
@@ -178,24 +191,28 @@ def load_forecasted_forcing(
         fcst_cycle=[fcst_cycle],
         lead_time=[lead_time],
     )
-    assert len(file_list) == 1, f"Expected exactly one file for the specified parameters, got {len(file_list)}."
+    assert len(file_list) == 1, (
+        f"Expected exactly one file for the specified parameters, got {len(file_list)}."
+    )
     # Append .json to the file urls
     file_list = append_jsons(file_list)
-    
+    print(f"Loading forecasted forcing from {file_list[0]}")
+
     # Load the dataset from the file list
     datasets = load_datasets(file_list)
     if not datasets:
         raise ValueError("No datasets found for the specified parameters.")
     return datasets[0]
 
+
 @use_cluster
 def merge_datasets(datasets: List[xr.Dataset]) -> xr.Dataset:
     """
     Merge multiple xarray Datasets into a single Dataset.
-    
+
     Args:
         datasets (List[xr.Dataset]): List of xarray Datasets to merge.
-    
+
     Returns:
         xr.Dataset: Merged xarray Dataset.
     """
@@ -203,27 +220,30 @@ def merge_datasets(datasets: List[xr.Dataset]) -> xr.Dataset:
         raise ValueError("No datasets provided for merging.")
     merged_dataset = xr.merge(datasets)
     return merged_dataset
-    
+
+
 if __name__ == "__main__":
     import time
+
     # Example usage
-    start_date = "202301010000" # January 1, 2023
-    end_date = "202301010000" # January 2, 2023
+    start_date = "202301010000"  # January 1, 2023
+    end_date = "202301010000"  # January 2, 2023
     t0 = time.perf_counter()
     datasets = load_forecasted_forcings(
         start_date=start_date,
         end_date=end_date,
         # fcst_cycle=[0, 6, 12, 18],
         # lead_times=[1, 2, 3],
-        # fcst_cycle=[0],
+        fcst_cycle=[0],
         # fcst_cycle=list(range(0, 5)),
-        fcst_cycle=list(range(0, 24)),
+        # fcst_cycle=list(range(0, 24)),
         lead_times=[1],
         parallel=True,
     )
     t1 = time.perf_counter()
     print(f"Loaded {len(datasets)} datasets in {t1 - t0:.2f} seconds")
-    def timetest_grab_ns(num: int)->int:
+
+    def timetest_grab_ns(num: int) -> int:
         before = time.perf_counter_ns()
         test_date = "202301010000"
         test_dataset = load_forecasted_forcings(
@@ -236,27 +256,27 @@ if __name__ == "__main__":
         after = time.perf_counter_ns()
         print(f"Finished loading {num}")
         return after - before
-    timetests = [timetest_grab_ns(i) for i in range(0, 24)]
-    from matplotlib import pyplot as plt
-    timetests = [i / 1e6 for i in timetests]  # Convert to milliseconds
-    plt.plot(timetests)
-    plt.xlabel("Number of Forecast Cycles")
-    plt.ylabel("Time (ms)")
-    plt.title("Time to Load Forecasted Forcings vs. Number of Forecast Cycles")
-    plt.grid()
-    plt.savefig("dist/forecasted_forcings_load_time.png")
-        
-        
-        
+
+    # timetests = [timetest_grab_ns(i) for i in range(0, 24)]
+    # from matplotlib import pyplot as plt
+
+    # timetests = [i / 1e6 for i in timetests]  # Convert to milliseconds
+    # plt.plot(timetests)
+    # plt.xlabel("Number of Forecast Cycles")
+    # plt.ylabel("Time (ms)")
+    # plt.title("Time to Load Forecasted Forcings vs. Number of Forecast Cycles")
+    # plt.grid()
+    # plt.savefig("dist/forecasted_forcings_load_time.png")
+
     # print(datasets[0])  # Print the first dataset for verification
     # print(datasets[1])  # Print the first dataset for verification
-    
+
     # Check that single dataset loading works
     # single_dataset = load_forecasted_forcing(
     #     date="202301010000",
     # )
     # print(f"Single dataset loaded: {single_dataset}")
-    
+
     # print(f"Merging datasets...")
     # t2 = time.perf_counter()
     # merged_dataset = merge_datasets(datasets)

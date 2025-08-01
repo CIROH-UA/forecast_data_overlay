@@ -11,6 +11,8 @@ from data_processing.forcings import create_forcings
 from data_processing.graph_utils import get_upstream_cats, get_upstream_ids
 from flask import Blueprint, jsonify, render_template, request
 
+from forecasting_data.forecast_datasets import load_forecasted_forcing
+
 main = Blueprint("main", __name__)
 intra_module_db = {}
 
@@ -39,6 +41,7 @@ def get_upstream_wbids():
     upstream_ids = get_upstream_ids(cat_id)
     # remove the selected cat_id from the set
     return [id for id in upstream_ids if id.startswith("wb")], 200
+
 
 @main.route("/forcings", methods=["POST"])
 def get_forcings():
@@ -78,6 +81,7 @@ def get_forcings():
 
     return "success", 200
 
+
 @main.route("/get_catids_from_vpu", methods=["POST"])
 def get_catids_from_vpu():
     raise NotImplementedError
@@ -98,3 +102,74 @@ def get_logs():
             return jsonify({"logs": reversed_lines}), 200
     except Exception:
         return jsonify({"error": "unable to fetch logs"})
+
+
+@main.route("/set_time", methods=["POST"])
+def set_time():
+    """Set the selected forecast time for the app."""
+    data = json.loads(request.data.decode("utf-8"))
+    missing = []
+    selected_time = data.get("target_time")
+    if not selected_time:
+        missing.append("target_time")
+    forecast_cycle = data.get("forecast_cycle")
+    if not forecast_cycle:
+        missing.append("forecast_cycle")
+    lead_time = data.get("lead_time")
+    if not lead_time:
+        missing.append("lead_time")
+    if missing:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+    intra_module_db["selected_time"] = selected_time
+    intra_module_db["forecast_cycle"] = forecast_cycle
+    intra_module_db["lead_time"] = lead_time
+    logger.info(
+        f"Selected time set to {selected_time}, cycle {forecast_cycle}, lead time {lead_time}"
+    )
+    return jsonify({"message": "Forecast arguments set successfully"}), 200
+
+
+import traceback
+
+
+@main.route("/get_forecast_precip", methods=["GET"])
+def get_forecast_precip():
+    """Get the forecast precipitation for the selected arguments."""
+    selected_time = intra_module_db.get("selected_time")
+    forecast_cycle = intra_module_db.get("forecast_cycle")
+    lead_time = intra_module_db.get("lead_time")
+
+    if not selected_time or not forecast_cycle or not lead_time:
+        return jsonify({"error": "Forecast arguments not set"}), 400
+
+    forecast_cycle = int(forecast_cycle)
+    lead_time = int(lead_time)
+
+    try:
+        print(
+            f"Loading forecasted forcing for {selected_time} [{type(selected_time)}], "
+            f"cycle {forecast_cycle} [{type(forecast_cycle)}], lead time {lead_time} [{type(lead_time)}]"
+        )
+        dataset = load_forecasted_forcing(
+            date=selected_time, fcst_cycle=forecast_cycle, lead_time=lead_time
+        )
+        precip_data = dataset["RAINRATE"]
+        data_dict = {}
+        # Dataset is a 3d array with dimensions (time, x, y)
+        # The requested data contains only the first time step
+        # Ideally we store the data in the dict with `"{x},{y}": value` pairs
+        for x in range(precip_data.shape[1]):
+            for y in range(precip_data.shape[2]):
+                value = precip_data[0, x, y].item()
+                data_dict[f"{x},{y}"] = value
+        data_json = json.dumps(data_dict)
+        logger.info(
+            f"Forecasted precipitation data loaded successfully for {selected_time} ; {forecast_cycle} ; {lead_time}"
+        )
+        return jsonify(data_json), 200
+    except Exception as e:
+        print(f"Error loading forecasted forcing")
+        print(str(e))
+        print(traceback.format_exc())
+        logger.error(f"Error loading forecasted forcing: {str(e)}")
+        return jsonify({"error": str(e)}), 500

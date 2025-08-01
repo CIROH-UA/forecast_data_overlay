@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+if __name__ == "__main__":
+    import sys
+
+    sys.path.append("./modules/")
 from typing import (
     List,
     Tuple,
@@ -197,11 +201,17 @@ def selecturlbase(
         return urlbasedict[urlbaseinput]
     else:
         return defaulturlbase
-    
+
+
 def make_daterange(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-)->List[datetime]:
+) -> List[datetime]:
+    # If hours/minutes not provided, default to 00:00
+    if start_date and len(start_date) == 8:
+        start_date += "0000"
+    if end_date and len(end_date) == 8:
+        end_date += "0000"
     try:
         _dtstart = (
             datetime.strptime(start_date, "%Y%m%d%H%M")
@@ -210,6 +220,9 @@ def make_daterange(
         )
         _until = datetime.strptime(end_date, "%Y%m%d%H%M") if end_date else _dtstart
     except Exception:
+        print(
+            f"Provided dates {start_date=} and {end_date=} are not in the expected format. Defaulting to current date."
+        )
         today = datetime.now(timezone.utc)
         _dtstart = today
         _until = today
@@ -220,6 +233,7 @@ def make_daterange(
         until=_until,
     )
     return list(dates)
+
 
 def create_file_list(
     runinput: NWMRun,
@@ -440,6 +454,7 @@ def create_file_list(
         )
     return result
 
+
 def create_file_list_range(
     runinput: NWMRun,
     varinput: NWMVar,
@@ -467,6 +482,7 @@ def create_file_list_range(
         lead_time=lead_time,
     )
 
+
 # Version of create_file_list that uses the 8th URL base by default
 def create_default_file_list(
     runinput: NWMRun,
@@ -490,7 +506,8 @@ def create_default_file_list(
         urlbaseinput=8,  # Default to the 8th URL base
         lead_time=lead_time,
     )
-    
+
+
 def get_default_file(
     runinput: NWMRun,
     varinput: NWMVar,
@@ -499,7 +516,7 @@ def get_default_file(
     date: Optional[Union[str, datetime]] = None,
     fcst_cycle: Optional[List[int]] = None,
     lead_time: Optional[List[int]] = None,
-)->str:
+) -> str:
     """Generates a default file name based on the provided parameters."""
     if isinstance(date, str):
         date = datetime.strptime(date, "%Y%m%d%H%M")
@@ -519,12 +536,14 @@ def get_default_file(
         fcst_cycle=fcst_cycle,
         lead_time=lead_time,
     )
-    
+
     return file_list[0] if file_list else ""
+
 
 def append_jsons(file_list: List[str]) -> List[str]:
     """Appends '.json' to each file in the list."""
     return [f"{file}.json" for file in file_list]
+
 
 def generate_urls(
     start_date: Optional[str] = None,
@@ -537,9 +556,9 @@ def generate_urls(
     target_file: str = "filenamelist.txt",
 ) -> List[str]:
     """Generates a list of URLs based on the provided parameters."""
-    
+
     default_urlbase = selecturlbase(urlbasedict, 8)
-    
+
     file_list = create_file_list_range(
         runinput,
         varinput,
@@ -551,15 +570,16 @@ def generate_urls(
         default_urlbase,
         lead_time,
     )
-    
+
     if os.path.exists(target_file):
         os.remove(target_file)
-    
+
     with open(target_file, "wt") as file:
         for item in file_list:
             file.write(f"{item}.json\n")
-    
+
     return file_list
+
 
 if __name__ == "__main__":
     # Test the file list generation
@@ -573,7 +593,7 @@ if __name__ == "__main__":
     #     runinput=1,
     #     target_file=file_dest,
     # )
-    file_urls = create_file_list(
+    file_urls = create_file_list_range(
         runinput=NWMRun.SHORT_RANGE,
         varinput=NWMVar.CHANNEL_RT,
         geoinput=NWMGeo.CONUS,
@@ -581,7 +601,7 @@ if __name__ == "__main__":
         end_date="202507040000",
         fcst_cycle=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
         lead_time=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-        urlbaseinput=8, # Match the default URL base used in the original code
+        urlbaseinput=8,  # Match the default URL base used in the original code
     )
     for url in file_urls:
         print(url)

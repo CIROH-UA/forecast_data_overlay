@@ -88,7 +88,7 @@ if (colorScheme == "light") {
     "line-color": ["rgba", 71, 58, 222, 1],
   };
 }
-if (colorScheme == "dark") {    
+if (colorScheme == "dark") {
   nwm_paint = {
     "line-width": 1,
     "line-color": ["rgba", 255, 255, 255, 1],
@@ -138,16 +138,16 @@ function update_map(cat_id, e) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cat_id),
   })
-  .then(response => response.json())
-  .then(data => {
-    map.setFilter('upstream-catchments', ['any', ['in', 'divide_id', ...data]]);
-    if (data.length === 0) {
-      new maplibregl.Popup()
-        .setLngLat(e.lngLat)
-        .setHTML('No upstreams')
-        .addTo(map);
-    }
-  });
+    .then(response => response.json())
+    .then(data => {
+      map.setFilter('upstream-catchments', ['any', ['in', 'divide_id', ...data]]);
+      if (data.length === 0) {
+        new maplibregl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML('No upstreams')
+          .addTo(map);
+      }
+    });
 }
 map.on('click', 'catchments', (e) => {
   cat_id = e.features[0].properties.divide_id;
@@ -275,5 +275,160 @@ toggleButtonAorc.addEventListener("click", () => {
     map.setFilter("aorc_zarr_chunks", null);
     toggleButtonAorc.innerText = "Hide AORC chunks";
     showAorc = true;
+  }
+});
+
+
+// Set up the map overlay for forecasted precipitation
+// We don't have a tilemap ready for this, so we need to create the geometries ourselves
+
+map.on("load", () => {
+  map.addSource("forecasted_precip", {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: []
+    }
+  });
+
+  map.addLayer({
+    id: "forecasted_precip_layer",
+    type: "fill",
+    source: "forecasted_precip",
+    paint: {
+      "fill-color": ["get", "color"],
+      "fill-opacity": 0.5
+    }
+  });
+});
+
+showForecastedPrecip = false
+const toggleButtonForecastedPrecip = document.querySelector("#toggle-button-forecast");
+toggleButtonForecastedPrecip.addEventListener("click", () => {
+  if (showForecastedPrecip) {
+    map.setFilter("forecasted_precip_layer", ["==", "color", ""]);
+    toggleButtonForecastedPrecip.innerText = "Show forecasted precipitation";
+    showForecastedPrecip = false;
+  } else {
+    map.setFilter("forecasted_precip_layer", null);
+    toggleButtonForecastedPrecip.innerText = "Hide forecasted precipitation";
+    showForecastedPrecip = true;
+  }
+});
+
+// Function to update the forecasted precipitation overlay with received data
+function updateForecastLayer(data) {
+  // Data is an object of precipitation values keyed by a composite string of "x,y"
+  const minValue = Math.min(...Object.values(data));
+  const maxValue = Math.max(...Object.values(data));
+  const color = (value) => {
+    // Map the value to a color based on a gradient
+    const ratio = (value - minValue) / (maxValue - minValue);
+    const r = Math.floor(255 * (1 - ratio));
+    const g = Math.floor(255 * ratio);
+    return `rgba(${r}, ${g}, 0, 1)`; // Green to red gradient
+  }
+  const features = Object.entries(data).map(([key, value]) => {
+    const [x, y] = key.split(',').map(Number);
+    return {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [x, y]
+      },
+      properties: {
+        color: color(value),
+        value: value
+      }
+    };
+  });
+  // Update the source data
+  map.getSource("forecasted_precip").setData({
+    type: "FeatureCollection",
+    features: features
+  });
+}
+
+// Accessing forecasted forcing data
+
+function updateForecastedPrecipOverlay() {
+  fetch('/get_forecast_precip', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Forecasted precipitation data received:', data);
+      // Update the map overlay with the received data
+      updateForecastLayer(data);
+    })
+    .catch(error => {
+      console.error('Error fetching forecasted precipitation data:', error);
+    });
+}
+
+
+
+
+document.getElementById('set-time').addEventListener('click', function () {
+  const targetTime = document.getElementById('target-time').value;
+  const leadTime = document.getElementById('lead-time').value;
+  const forecastCycle = document.getElementById('forecast-cycle').value;
+  const prevTime = document.getElementById('selected-time').textContent;
+  const prevLeadTime = document.getElementById('selected-lead-time').textContent;
+  const prevForecastCycle = document.getElementById('selected-forecast-cycle').textContent
+  var changed = false;
+  // Check if any of the values have changed
+  if (targetTime !== prevTime || leadTime !== prevLeadTime || forecastCycle !== prevForecastCycle) {
+    changed = true;
+  }
+  if (changed) {
+    document.getElementById('selected-time').textContent = targetTime;
+    document.getElementById('selected-lead-time').textContent = leadTime;
+    document.getElementById('selected-forecast-cycle').textContent = forecastCycle;
+
+    // Need to send the time as YYYYMMDD, but input provides it as YYYY-MM-DDTHH:MM
+    var formattedTime = targetTime.replace(/-/g, '');
+    const Tindex = formattedTime.indexOf('T');
+    if (Tindex !== -1) {
+      formattedTime = formattedTime.substring(0, Tindex);
+    }
+
+
+    // Trigger the time change event
+    fetch('/set_time', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        target_time: formattedTime,
+        lead_time: leadTime,
+        forecast_cycle: forecastCycle
+      })
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Time set successfully:', data);
+      })
+      .then(() => {
+        // Fetch and update the forecasted precipitation data
+        updateForecastedPrecipOverlay();
+      })
+      .catch(error => {
+        console.error('Error setting time:', error);
+      });
   }
 });
