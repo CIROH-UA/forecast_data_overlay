@@ -11,7 +11,16 @@ from data_processing.forcings import create_forcings
 from data_processing.graph_utils import get_upstream_cats, get_upstream_ids
 from flask import Blueprint, jsonify, render_template, request
 
-from forecasting_data.forecast_datasets import load_forecasted_forcing
+from forecasting_data.forecast_datasets import (
+    load_forecasted_forcing,
+    get_dataset_precip,
+    get_forecasting_gridlines_horiz_projected,
+    get_forecasting_gridlines_vert_projected,
+    rescale_dataset,
+    reproject_points,
+)
+
+from time import perf_counter
 
 main = Blueprint("main", __name__)
 intra_module_db = {}
@@ -153,19 +162,64 @@ def get_forecast_precip():
         dataset = load_forecasted_forcing(
             date=selected_time, fcst_cycle=forecast_cycle, lead_time=lead_time
         )
-        precip_data = dataset["RAINRATE"]
+        intra_module_db["forecasted_forcing_dataset"] = dataset
+        scaleX = dataset.attrs.get("scaleX", 16)
+        scaleY = dataset.attrs.get("scaleY", 16)
+        rescaled_dataset = rescale_dataset(dataset, scaleX, scaleY)
+        intra_module_db["rescaled_forecasted_forcing_dataset"] = rescaled_dataset
+        # precip_data = dataset["RAINRATE"]
         data_dict = {}
-        # Dataset is a 3d array with dimensions (time, x, y)
-        # The requested data contains only the first time step
-        # Ideally we store the data in the dict with `"{x},{y}": value` pairs
-        print(f"Grabbing values from precip_data with shape {precip_data.shape}")
-        for x in range(precip_data.shape[1]):
-            for y in range(precip_data.shape[2]):
-                value = precip_data[0, x, y].values.item()  # Get the value as a float
-                data_dict[f"{x},{y}"] = value
-        print(f"Data dict created with {len(data_dict)} entries. Converting to JSON.")
+        # # Dataset is a 3d array with dimensions (time, x, y)
+        # # The requested data contains only the first time step
+        # # Ideally we store the data in the dict with `"{x},{y}": value` pairs
+        # print(f"Grabbing values from precip_data with shape {precip_data.shape}")
+        # for x in range(precip_data.shape[1]):
+        #     for y in range(precip_data.shape[2]):
+        #         value = precip_data[0, x, y].values.item()  # Get the value as a float
+        #         data_dict[f"{x},{y}"] = value
+        # print(f"Data dict created with {len(data_dict)} entries. Converting to JSON.")
+
+        # Accessing the data points individually is ridiculously slow,
+        # so we will instead convert to numpy before accessing by using a relevant helper function
+        before_access = perf_counter()
+        # precip_data_np, x_coords, y_coords = get_dataset_precip(dataset)
+        precip_data_np, x_coords, y_coords = get_dataset_precip(
+            rescaled_dataset
+        )  # Use the rescaled dataset
+        # Precip data is now a 2D numpy array with shape (x, y)
+        after_helper_access = perf_counter()
+        print(f"Accessing precip data took {after_helper_access - before_access:.2f} seconds")
+        # # Now we can iterate over the numpy array and create the data_dict
+        points = []
+        values = []
+        for y in range(precip_data_np.shape[0]):
+            row = []
+            rowvals = []
+            for x in range(precip_data_np.shape[1]):
+                value = precip_data_np[y, x]
+                row.append((x_coords[x], y_coords[y]))  # (x, y) coordinates
+                rowvals.append(value)
+            points.append(row)
+            values.append(rowvals)
+        # Reproject points to the desired projection
+        # reprojected_points = reproject_points(dataset, points)
+        reprojected_points = [reproject_points(dataset, row) for row in points]
+        # Now we can create the data_dict with reprojected points and values
+        data_dict = {"points": reprojected_points, "values": values}
+        # print(f"Data dict created with {len(data_dict)} entries. Converting to JSON.")
+        # data_dict["precip_data"] = precip_data_np.tolist()  # Convert to list for JSON serialization
+        # data_dict["x_coords"] = x_coords.tolist()  # Convert to list for JSON serialization
+        # data_dict["y_coords"] = y_coords.tolist()  # Convert to list for JSON serialization
+        after_data_dict_creation = perf_counter()
+        print(
+            f"Creating data_dict took {after_data_dict_creation - after_helper_access:.2f} seconds"
+        )
         # Convert the data_dict to JSON
-        data_json = json.dumps(data_dict)
+        data_json = json.dumps(data_dict, default=str)
+        after_json_conversion = perf_counter()
+        print(
+            f"JSON conversion took {after_json_conversion - after_data_dict_creation:.2f} seconds"
+        )
         print(f"Data JSON created with length {len(data_json)}")
         logger.info(
             f"Forecasted precipitation data loaded successfully for {selected_time} ; {forecast_cycle} ; {lead_time}"
@@ -177,3 +231,13 @@ def get_forecast_precip():
         print(traceback.format_exc())
         logger.error(f"Error loading forecasted forcing: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@main.route("/get_forecasted_forcing_grid", methods=["GET"])
+def get_forecasted_forcing_grid():
+    """Get forecasting gridlines to display on the map."""
+    horiz_gridlines = get_forecasting_gridlines_horiz_projected()
+    vert_gridlines = get_forecasting_gridlines_vert_projected()
+    if horiz_gridlines is None or vert_gridlines is None:
+        return jsonify({"error": "Failed to load forecasting gridlines"}), 500
+    return jsonify({"horiz_gridlines": horiz_gridlines, "vert_gridlines": vert_gridlines}), 200

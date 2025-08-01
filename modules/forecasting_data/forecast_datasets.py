@@ -4,7 +4,7 @@ if __name__ == "__main__":
     import sys
 
     sys.path.append("./modules/")
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 import xarray as xr
 import fsspec
 import ujson
@@ -18,6 +18,10 @@ import glob
 from forecasting_data.urlgen_enums import NWMRun, NWMVar, NWMGeo, NWMMem
 from forecasting_data.urlgen_builder import create_default_file_list, append_jsons
 from data_processing.dask_utils import use_cluster
+import numpy as np
+import pickle
+import pyproj
+from functools import cache
 
 # fs2 = fsspec.filesystem("")
 
@@ -222,6 +226,315 @@ def merge_datasets(datasets: List[xr.Dataset]) -> xr.Dataset:
     return merged_dataset
 
 
+def get_precip_projection(
+    dataset: xr.Dataset,
+) -> str:
+    """
+    Get the projection method of the precipitation data in the dataset.
+
+    Args:
+        dataset (xr.Dataset): The xarray Dataset containing the precipitation data.
+
+    Returns:
+        str: The projection method of the precipitation data.
+    """
+    if "RAINRATE" not in dataset.data_vars:
+        raise ValueError("Dataset does not contain 'RAINRATE' variable.")
+    precip_data = dataset["RAINRATE"]
+    if "esri_pe_string" not in precip_data.attrs:
+        raise ValueError("Precipitation data does not contain 'esri_pe_string' attribute.")
+    return precip_data.attrs["esri_pe_string"]
+
+
+def get_dataset_precip(
+    dataset: xr.Dataset,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Extract the full precipitation data from the dataset and return it as a tuple of relevant arrays.
+    Args:
+        dataset (xr.Dataset): The xarray Dataset containing the precipitation data.
+    Returns:
+        result (Tuple[np.ndarray, np.ndarray, np.ndarray]): A tuple containing:
+            - Precipitation data as a 2D numpy array with shape (y, x).
+            - X coordinates as a 1D numpy array.
+            - Y coordinates as a 1D numpy array.
+    """
+    if "RAINRATE" not in dataset.data_vars:
+        raise ValueError("Dataset does not contain 'RAINRATE' variable.")
+    precip_data = dataset["RAINRATE"][0]
+    precip_data_np = precip_data.values  # Convert to numpy array
+    x_coords = precip_data.x.values  # Get x coordinates as a numpy array
+    y_coords = precip_data.y.values  # Get y coordinates as a numpy array
+    result = (precip_data_np, x_coords, y_coords)
+    print(
+        f"Extracted ndarrays from dataset: {result[0].shape=}, {result[1].shape=}, {result[2].shape=}"
+    )
+    return result
+
+
+@cache
+def get_example_dataset() -> xr.Dataset:
+    """
+    Get an example dataset for testing purposes.
+
+    Returns:
+        xr.Dataset: An example xarray Dataset.
+    """
+    try:
+        with open("./dist/example_dataset.pkl", "rb") as f:
+            dataset = pickle.load(f)
+        print("Loaded example dataset from cache.")
+    except FileNotFoundError:
+        print("No example dataset found, loading a new one.")
+        dataset = load_forecasted_forcing(date="202301010000", fcst_cycle=0, lead_time=1)
+        with open("./dist/example_dataset.pkl", "wb") as f:
+            pickle.dump(dataset, f)
+        print("Cached example dataset to ./dist/example_dataset.pkl")
+    return dataset
+
+
+@cache
+def get_example_dataset_rescaled(scaleX: int = 16, scaleY: int = 16) -> xr.Dataset:
+    """
+    Get an example dataset for testing purposes, rescaled by the specified factors.
+
+    Args:
+        scaleX (int): The factor by which to rescale the x dimension.
+        scaleY (int): The factor by which to rescale the y dimension.
+
+    Returns:
+        xr.Dataset: An example xarray Dataset, rescaled.
+    """
+    example_dataset = get_example_dataset()
+    if scaleX != 1 or scaleY != 1:
+        example_dataset = rescale_dataset(example_dataset, scaleX=scaleX, scaleY=scaleY)
+    return example_dataset
+
+
+# @cache
+# def get_forecasting_grid(scaleX: int = 16, scaleY: int = 16) -> List[List[Tuple[float, float]]]:
+#     """
+#     Get the grid of coordinates for the forecasting data.
+
+#     Returns:
+#         List[List[Tuple[float, float]]]: A list of lists containing tuples of (x, y) coordinates.
+#     """
+#     example_dataset = get_example_dataset()
+#     if scaleX != 1 or scaleY != 1:
+#         example_dataset = rescale_dataset(example_dataset, scaleX=scaleX, scaleY=scaleY)
+#     precip_data_np, x_coords, y_coords = get_dataset_precip(example_dataset)
+#     # grid = []
+#     # for y in range(precip_data_np.shape[0]):
+#     #     row = []
+#     #     for x in range(precip_data_np.shape[1]):
+#     #         coord = (x_coords[x], y_coords[y])
+#     #         row.append(coord)
+#     #     grid.append(row)
+#     print(f"Creating grid from precip_data with shape {precip_data_np.shape}")
+#     grid = [
+#         [(x_coords[x], y_coords[y]) for x in range(precip_data_np.shape[1])]
+#         for y in range(precip_data_np.shape[0])
+#     ]
+#     print(f"Generated grid with {len(grid)} rows and {len(grid[0])} columns.")
+#     return grid
+
+
+# @cache
+# def get_forecasting_grid_projected() -> List[List[Tuple[float, float]]]:
+#     """
+#     Get the grid of coordinates for the forecasting data projected to EPSG:5070.
+
+#     Returns:
+#         List[List[Tuple[float, float]]]: A list of lists containing tuples of (x, y) coordinates projected to EPSG:5070.
+#     """
+#     example_dataset = get_example_dataset()
+#     current_projection = get_precip_projection(example_dataset)
+#     target_projection = "EPSG:5070"
+#     transformer = pyproj.Transformer.from_crs(current_projection, target_projection, always_xy=True)
+#     unprojected_grid = get_forecasting_grid()
+#     grid = []
+#     for row in unprojected_grid:
+#         projected_row = []
+#         for coord in row:
+#             projected_coord = transformer.transform(coord[0], coord[1])
+#             projected_row.append(projected_coord)
+#         grid.append(projected_row)
+#     print(f"Projected grid with {len(grid)} rows and {len(grid[0])} columns.")
+#     # Print the first few coordinates for verification
+#     print(f"First few projected coordinates: {grid[0][:3]}")
+#     return grid
+
+
+@cache
+def get_forecasting_gridlines_horiz(
+    scaleX: int = 16, scaleY: int = 16
+) -> List[List[Tuple[float, float]]]:
+    """
+    Get horizontal grid lines for the forecasting data.
+
+    Returns:
+        List[List[Tuple[float, float]]]: A list of lists containing tuples of (x, y) coordinates for horizontal grid lines.
+    """
+    example_dataset = get_example_dataset()
+    precip_data_np, x_coords, y_coords = get_dataset_precip(example_dataset)
+    gridlines_horiz = []
+    for y in range(0, precip_data_np.shape[0], scaleY):
+        line = []
+        for x in range(0, precip_data_np.shape[1], scaleX):
+            coord = (x_coords[x], y_coords[y])
+            line.append(coord)
+        gridlines_horiz.append(line)
+    print(
+        f"Generated {len(gridlines_horiz)} horizontal grid lines with {len(gridlines_horiz[0])} points each."
+    )
+    return gridlines_horiz
+
+
+@cache
+def get_forecasting_gridlines_vert(
+    scaleX: int = 16, scaleY: int = 16
+) -> List[List[Tuple[float, float]]]:
+    """
+    Get vertical grid lines for the forecasting data.
+
+    Returns:
+        List[List[Tuple[float, float]]]: A list of lists containing tuples of (x, y) coordinates for vertical grid lines.
+    """
+    example_dataset = get_example_dataset()
+    precip_data_np, x_coords, y_coords = get_dataset_precip(example_dataset)
+    gridlines_vert = []
+    for x in range(0, precip_data_np.shape[1], scaleX):
+        line = []
+        for y in range(0, precip_data_np.shape[0], scaleY):
+            coord = (x_coords[x], y_coords[y])
+            line.append(coord)
+        gridlines_vert.append(line)
+    print(
+        f"Generated {len(gridlines_vert)} vertical grid lines with {len(gridlines_vert[0])} points each."
+    )
+    return gridlines_vert
+
+
+@cache
+def get_forecasting_gridlines_horiz_projected(
+    scaleX: int = 16, scaleY: int = 16
+) -> List[List[Tuple[float, float]]]:
+    """
+    Get horizontal grid lines for the forecasting data projected to EPSG:5070.
+
+    Returns:
+        List[List[Tuple[float, float]]]: A list of lists containing tuples of (x, y) coordinates for horizontal grid lines projected to EPSG:5070.
+    """
+    unprojected_gridlines = get_forecasting_gridlines_horiz(scaleX=scaleX, scaleY=scaleY)
+    current_projection = get_precip_projection(get_example_dataset())
+    # target_projection = "EPSG:5070"
+    target_projection = "EPSG:4326"  # We want lat/lon coordinates for the map
+    transformer = pyproj.Transformer.from_crs(current_projection, target_projection, always_xy=True)
+    gridlines_horiz_projected = []
+    for line in unprojected_gridlines:
+        projected_line = []
+        for coord in line:
+            projected_coord = transformer.transform(coord[0], coord[1])
+            projected_line.append(projected_coord)
+        gridlines_horiz_projected.append(projected_line)
+    print(
+        f"Projected horizontal grid lines with {len(gridlines_horiz_projected)} lines, each with {len(gridlines_horiz_projected[0])} points."
+    )
+    return gridlines_horiz_projected
+
+
+def reproject_points(
+    dataset: xr.Dataset,
+    points: List[Tuple[float, float]],
+) -> List[Tuple[float, float]]:
+    """
+    Reproject a list of points from the dataset's projection to EPSG:4326.
+
+    Args:
+        dataset (xr.Dataset): The xarray Dataset containing the precipitation data.
+        points (List[Tuple[float, float]]): List of tuples containing (x, y) coordinates.
+
+    Returns:
+        List[Tuple[float, float]]: List of reprojected (longitude, latitude) coordinates.
+    """
+    current_projection = get_precip_projection(dataset)
+    target_projection = "EPSG:4326"
+    transformer = pyproj.Transformer.from_crs(current_projection, target_projection, always_xy=True)
+    reprojected_points = [transformer.transform(x, y) for x, y in points]
+    return reprojected_points
+
+
+@cache
+def get_forecasting_gridlines_vert_projected(
+    scaleX: int = 16, scaleY: int = 16
+) -> List[List[Tuple[float, float]]]:
+    """
+    Get vertical grid lines for the forecasting data projected to EPSG:5070.
+
+    Returns:
+        List[List[Tuple[float, float]]]: A list of lists containing tuples of (x, y) coordinates for vertical grid lines projected to EPSG:5070.
+    """
+    unprojected_gridlines = get_forecasting_gridlines_vert(scaleX=scaleX, scaleY=scaleY)
+    current_projection = get_precip_projection(get_example_dataset())
+    # target_projection = "EPSG:5070"
+    target_projection = "EPSG:4326"  # We want lat/lon coordinates for the map
+    transformer = pyproj.Transformer.from_crs(current_projection, target_projection, always_xy=True)
+    gridlines_vert_projected = []
+    for line in unprojected_gridlines:
+        projected_line = []
+        for coord in line:
+            projected_coord = transformer.transform(coord[0], coord[1])
+            projected_line.append(projected_coord)
+        gridlines_vert_projected.append(projected_line)
+    print(
+        f"Projected vertical grid lines with {len(gridlines_vert_projected)} lines, each with {len(gridlines_vert_projected[0])} points."
+    )
+    return gridlines_vert_projected
+
+
+def rescale_dataset(
+    dataset: xr.Dataset,
+    scaleX: int = 16,
+    scaleY: int = 16,
+) -> xr.Dataset:
+    """
+    Rescale the dataset by collapsing individual data points into larger blocks of the specified size.
+    Args:
+        dataset (xr.Dataset): The xarray Dataset to rescale.
+        scaleX (int): The number of x points to collapse into one.
+        scaleY (int): The number of y points to collapse into one.
+    Returns:
+        xr.Dataset: The rescaled xarray Dataset.
+    """
+    if "RAINRATE" not in dataset.data_vars:
+        raise ValueError("Dataset does not contain 'RAINRATE' variable.")
+    precip_data = dataset["RAINRATE"]
+    # Rescale the data by collapsing the specified number of points
+    rescaled_data: xr.DataArray = precip_data.coarsen(x=scaleX, y=scaleY, boundary="exact").sum()
+    print(
+        f"Rescaled data from shape {precip_data.shape} to {rescaled_data.shape} using scaleX={scaleX}, scaleY={scaleY}"
+    )
+    # Create a new dataset with the rescaled data
+    old_coords = precip_data.coords
+    new_coords = old_coords.assign(
+        {
+            "x": rescaled_data.x,
+            "y": rescaled_data.y,  # Use the new coordinates from the rescaled data
+        }
+    )
+    rescaled_dataset = xr.Dataset(
+        data_vars={"RAINRATE": rescaled_data},
+        attrs=dataset.attrs,
+        # coords=dataset.coords,
+        coords=new_coords,
+    )
+    # Modify the coordinates to match the new shape
+    assert rescaled_dataset.RAINRATE.shape == rescaled_data.shape, (
+        f"Rescaled dataset shape {rescaled_dataset.RAINRATE.shape} does not match rescaled data shape {rescaled_data.shape}."
+    )
+    return rescaled_dataset
+
+
 if __name__ == "__main__":
     import time
 
@@ -260,7 +573,141 @@ if __name__ == "__main__":
                 pickle.dump(datasets, f)
             print("Cached datasets to ./dist/forecasted_forcings_cache.pkl")
 
-    access_test = True
+    rescale_test = True
+    if rescale_test:
+        # Test rescaling the dataset
+        example_dataset = get_example_dataset()
+        print(f"Example dataset loaded with shape: {example_dataset.RAINRATE.shape}")
+        rescaled_dataset = rescale_dataset(example_dataset, scaleX=16, scaleY=16)
+        print(f"Rescaled dataset shape: {rescaled_dataset.RAINRATE.shape}")
+        print(example_dataset)
+        print(rescaled_dataset)
+        print(example_dataset.RAINRATE.shape)
+        print(rescaled_dataset.RAINRATE.shape)
+
+    grid_coordinate_test = False
+    if grid_coordinate_test:
+        # Test the x and y coordinates to see if they are evenly spaced, and by how much
+        example_dataset = get_example_dataset()
+        precip_data_np, x_coords, y_coords = get_dataset_precip(example_dataset)
+        print(f"x_coords: {x_coords[:3]}... (total {len(x_coords)} points)")
+        print(f"y_coords: {y_coords[:3]}... (total {len(y_coords)} points)")
+        x_diff = np.diff(x_coords)
+        y_diff = np.diff(y_coords)
+        print(f"x_diff: {x_diff[:3]}... (total {len(x_diff)} points)")
+        print(f"y_diff: {y_diff[:3]}... (total {len(y_diff)} points)")
+        x_diff_set = set(x_diff)
+        y_diff_set = set(y_diff)
+        print(f"x_diff_set: {x_diff_set} (total {len(x_diff_set)} unique values)")
+        print(f"y_diff_set: {y_diff_set} (total {len(y_diff_set)} unique values)")
+
+        horiz_gridlines = get_forecasting_gridlines_horiz()
+        print(
+            f"Horizontal gridlines: {len(horiz_gridlines)} lines, each with {len(horiz_gridlines[0])} points."
+        )
+        print(f"First few points of the first horizontal gridline: {horiz_gridlines[0][:3]}")
+        horiz_gridlines_projected = get_forecasting_gridlines_horiz_projected()
+        print(
+            f"Projected horizontal gridlines: {len(horiz_gridlines_projected)} lines, each with {len(horiz_gridlines_projected[0])} points."
+        )
+        print(
+            f"First few points of the first projected horizontal gridline: {horiz_gridlines_projected[0][:3]}"
+        )
+        horiz_gridlines_firstline_diff = []
+        for i in range(len(horiz_gridlines[0]) - 1):
+            diff = (
+                horiz_gridlines[0][i + 1][0] - horiz_gridlines[0][i][0],
+                horiz_gridlines[0][i + 1][1] - horiz_gridlines[0][i][1],
+            )
+            horiz_gridlines_firstline_diff.append(diff)
+        print(
+            f"First horizontal gridline differences: {horiz_gridlines_firstline_diff[:3]}... (total {len(horiz_gridlines_firstline_diff)} differences)"
+        )
+        horiz_gridlines_projected_firstline_diff = []
+        for i in range(len(horiz_gridlines_projected[0]) - 1):
+            diff = (
+                horiz_gridlines_projected[0][i + 1][0] - horiz_gridlines_projected[0][i][0],
+                horiz_gridlines_projected[0][i + 1][1] - horiz_gridlines_projected[0][i][1],
+            )
+            horiz_gridlines_projected_firstline_diff.append(diff)
+        print(
+            f"First projected horizontal gridline differences: {horiz_gridlines_projected_firstline_diff[:3]}... (total {len(horiz_gridlines_projected_firstline_diff)} differences)"
+        )
+
+    wkt_crs_test = False
+    if wkt_crs_test:
+        # Get dataset's projection method, to see if we can convert it to another system
+        first_dataset = datasets[0]
+        print(f"First dataset loaded with type: {type(first_dataset)=}")
+        print(f"First dataset dimensions: {first_dataset.dims=}")
+        print(f"First dataset variables: {list(first_dataset.data_vars)=}")
+        print(f"First dataset attributes: {first_dataset.attrs=}")
+        fst_rainrate: xr.DataArray = first_dataset.RAINRATE
+        print(f"First rainrate loaded with shape: {fst_rainrate.shape=}")
+        fst_rainrate_attrs = fst_rainrate.attrs
+        # print("First rainrate attributes:")
+        # for key, value in fst_rainrate_attrs.items():
+        #     print(f"  {key}: {value}")
+        fst_rainrate_esri_pe = fst_rainrate_attrs["esri_pe_string"]
+        print(f"First rainrate esri_pe_string: {fst_rainrate_esri_pe=}")
+        import pyproj
+        import geopandas as gpd
+
+        target_crs = "EPSG:5070"
+        current_crs = pyproj.CRS.from_string(fst_rainrate_esri_pe)
+        print(f"Current CRS: {current_crs}")
+        print(f"Target CRS: {target_crs}")
+        # Verify the current CRS is valid by transforming a point
+        test_point = (fst_rainrate.x.values[0], fst_rainrate.y.values[0])
+        print(f"Test point in current CRS: {test_point}")
+        transformer = pyproj.Transformer.from_crs(current_crs, target_crs, always_xy=True)
+        transformed_point = transformer.transform(*test_point)
+        print(f"Transformed point in target CRS: {transformed_point}")
+        first_column_points = [
+            (fst_rainrate.x.values[x], fst_rainrate.y.values[0])
+            for x in range(fst_rainrate.shape[1])
+        ]
+        print(
+            f"First column points in current CRS: {first_column_points[:3]}... (total {len(first_column_points)} points)"
+        )
+        transformed_first_column_points = [
+            transformer.transform(*point) for point in first_column_points
+        ]
+        print(
+            f"Transformed first column points in target CRS: {transformed_first_column_points[:3]}... (total {len(transformed_first_column_points)} points)"
+        )
+
+        # Check the grid functions
+        # >.... it is crashing when trying to access the grid,..
+        # Let's estimate the memory usage of the grid
+        grid_memory_usage = (
+            fst_rainrate.shape[0] * fst_rainrate.shape[1] * fst_rainrate.shape[2] * 4
+        )  # 4 bytes per float32
+        # however, it's not just float32s, it's a tuple of (x, y) coordinates,
+        # which is two float64s (8 bytes each)
+        # so we need to multiply by (8 + 8) / 4 = 4
+        # grid_memory_usage *= 4
+        mem_usage_kb = grid_memory_usage / 1024
+        mem_usage_mb = mem_usage_kb / 1024
+        mem_usage_gb = mem_usage_mb / 1024
+        if mem_usage_gb > 1:
+            print(f"Estimated memory usage of the grid: {mem_usage_gb:.2f} GB")
+        elif mem_usage_mb > 1:
+            print(f"Estimated memory usage of the grid: {mem_usage_mb:.2f} MB")
+        elif mem_usage_kb > 1:
+            print(f"Estimated memory usage of the grid: {mem_usage_kb:.2f} KB")
+        else:
+            print(f"Estimated memory usage of the grid: {grid_memory_usage} bytes")
+        # grid = get_forecasting_grid()
+        # print(f"Grid has {len(grid)} rows and {len(grid[0])} columns.")
+        # print(f"First few grid coordinates: {grid[0][:3]}")
+        # projected_grid = get_forecasting_grid_projected()
+        # print(
+        #     f"Projected grid has {len(projected_grid)} rows and {len(projected_grid[0])} columns."
+        # )
+        # print(f"First few projected grid coordinates: {projected_grid[0][:3]}")
+
+    access_test = False
     if access_test:
         # Verify accessing individual values
         first_dataset = datasets[0]
@@ -303,6 +750,29 @@ if __name__ == "__main__":
 
         # Is this necessary in practice? Probably not, as long as we remember to use .values.item() when accessing individual values.
 
+        # Once we've converted the data to numpy, can we still access the x and y coordinates?
+        # Let's test.
+        xr_subset_0 = fst_rainrate[0, 0:10, 0:10]  # Get a subset of the data
+        print(f"Subset shape: {xr_subset_0.shape}")
+        # Now convert to numpy
+        np_subset_0 = xr_subset_0.values  # Convert to numpy array
+        print(f"Numpy subset shape: {np_subset_0.shape}")
+        # Can we still access the x and y coordinates? What does the object contain?
+        print(f"Numpy subset type: {type(np_subset_0)}")
+        print(f"Numpy subset data: {np_subset_0[:3, :3]}")
+        # No x or y coordinates... Can we get them by accessing in a different way?
+        test0 = fst_rainrate[0].x
+        print(f"{test0=}, type: {type(test0)=}")
+        test1 = fst_rainrate[0].x.values
+        print(f"{test1=}, type: {type(test1)=}")
+        test2 = fst_rainrate[0].y
+        print(f"{test2=}, type: {type(test2)=}")
+        test3 = fst_rainrate[0].y.values
+        print(f"{test3=}, type: {type(test3)=}")
+
+    access_timing_test = False
+    if access_timing_test:
+        fst_rainrate = datasets[0].RAINRATE
         # Actually. Is this a good way to do this? Let's compare individual access vs whole array access when iterating over the dataset.
         # Let's time it!
         t0 = time.perf_counter()

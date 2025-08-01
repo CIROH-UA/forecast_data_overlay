@@ -283,6 +283,81 @@ toggleButtonAorc.addEventListener("click", () => {
 // We don't have a tilemap ready for this, so we need to create the geometries ourselves
 
 map.on("load", () => {
+  map.addSource("forecasting_gridlines", {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: []
+    }
+  });
+
+  map.addLayer({
+    id: "forecasting_gridlines_layer",
+    type: "line",
+    source: "forecasting_gridlines",
+    paint: {
+      "line-color": ["get", "color"],
+      "line-width": 1,
+      "line-opacity": 0.1
+    }
+  });
+});
+
+// Populate the forecasting gridlines on the map
+show_gridlines = true;
+if (show_gridlines) {
+  map.on("load", () => {
+    fetch('/get_forecasted_forcing_grid')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Forecasting gridlines data received:', data);
+        const features = [];
+        // Process horizontal gridlines
+        // Each line is an array of tuples [x, y]
+        data.horiz_gridlines.forEach(line => {
+          features.push({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: line.map(point => [point[0], point[1]]),
+            },
+            properties: {
+              // color: "rgba(255, 0, 0, 1)" // Red color for horizontal lines
+              color: "rgba(0, 0, 255, 1)" // Blue color for horizontal lines
+            }
+          });
+        });
+        // Process vertical gridlines
+        data.vert_gridlines.forEach(line => {
+          features.push({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: line.map(point => [point[0], point[1]]),
+            },
+            properties: {
+              color: "rgba(0, 0, 255, 1)" // Blue color for vertical lines
+            }
+          });
+        });
+        // Update the source data
+        map.getSource("forecasting_gridlines").setData({
+          type: "FeatureCollection",
+          features: features
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching forecasting gridlines data:', error);
+      });
+  });
+}
+
+map.on("load", () => {
   map.addSource("forecasted_precip", {
     type: "geojson",
     data: {
@@ -317,36 +392,88 @@ toggleButtonForecastedPrecip.addEventListener("click", () => {
 });
 
 // Function to update the forecasted precipitation overlay with received data
+var receivedData = null;
 function updateForecastLayer(data) {
-  // Data is an object of precipitation values keyed by a composite string of "x,y"
-  const minValue = Math.min(...Object.values(data));
-  const maxValue = Math.max(...Object.values(data));
+  receivedData = data;
+  // // Data is an object of precipitation values keyed by a composite string of "x,y"
+  // const minValue = Math.min(...Object.values(data));
+  // const maxValue = Math.max(...Object.values(data));
+  // const color = (value) => {
+  //   // Map the value to a color based on a gradient
+  //   const ratio = (value - minValue) / (maxValue - minValue);
+  //   const r = Math.floor(255 * (1 - ratio));
+  //   const g = Math.floor(255 * ratio);
+  //   return `rgba(${r}, ${g}, 0, 1)`; // Green to red gradient
+  // }
+  // const features = Object.entries(data).map(([key, value]) => {
+  //   const [x, y] = key.split(',').map(Number);
+  //   return {
+  //     type: "Feature",
+  //     geometry: {
+  //       type: "Point",
+  //       coordinates: [x, y]
+  //     },
+  //     properties: {
+  //       color: color(value),
+  //       value: value
+  //     }
+  //   };
+  // });
+  // // Update the source data
+  // map.getSource("forecasted_precip").setData({
+  //   type: "FeatureCollection",
+  //   features: features
+  // });
+  // Data is an object that contains a 2D list of points and a 2D list of values
+  const points = data["points"];
+  const values = data["values"];
+  const minValue = Math.min(...values.flat());
+  const maxValue = Math.max(...values.flat());
   const color = (value) => {
+    if (value === minValue || Math.abs(value - minValue) < 1e-6) {
+      return "rgba(0, 0, 0, 0)"; // Transparent
+    }
     // Map the value to a color based on a gradient
     const ratio = (value - minValue) / (maxValue - minValue);
-    const r = Math.floor(255 * (1 - ratio));
-    const g = Math.floor(255 * ratio);
-    return `rgba(${r}, ${g}, 0, 1)`; // Green to red gradient
+    const g = Math.floor(255 * (1 - ratio));
+    const r = Math.floor(255 * ratio);
+    const a = Math.sqrt(ratio); // Adjust alpha for better visibility
+    return `rgba(${r}, ${g}, 0, ${a})`; // Green to red gradient
   }
-  const features = Object.entries(data).map(([key, value]) => {
-    const [x, y] = key.split(',').map(Number);
-    return {
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [x, y]
-      },
-      properties: {
-        color: color(value),
-        value: value
-      }
-    };
-  });
+  // For each point, create a polygon feature using the neighboring points
+  var features = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    for (let j = 0; j < points[i].length - 1; j++) {
+      const curPos = points[i][j];
+      const nextPosX = points[i][j + 1];
+      const nextPosY = points[i + 1][j];
+      const nextPosXY = points[i + 1][j + 1];
+      const value = values[i][j];
+      features.push({
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [[
+            [curPos[0], curPos[1]],
+            [nextPosX[0], nextPosX[1]],
+            [nextPosXY[0], nextPosXY[1]],
+            [nextPosY[0], nextPosY[1]],
+          ]]
+        },
+        properties: {
+          color: color(value),
+          value: value 
+        }
+      });
+    }
+  }
   // Update the source data
   map.getSource("forecasted_precip").setData({
     type: "FeatureCollection",
     features: features
   });
+  console.log('Forecasted precipitation overlay updated with data:', data);
+
 }
 
 // Accessing forecasted forcing data
@@ -365,6 +492,9 @@ function updateForecastedPrecipOverlay() {
       return response.json();
     })
     .then(data => {
+      if (typeof data === 'string') {
+        data = JSON.parse(data); // Ensure data is parsed correctly
+      }
       console.log('Forecasted precipitation data received:', data);
       // Update the map overlay with the received data
       updateForecastLayer(data);
