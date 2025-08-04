@@ -137,6 +137,21 @@ def set_time():
     )
     return jsonify({"message": "Forecast arguments set successfully"}), 200
 
+intra_module_db["scaleX"] = 16
+intra_module_db["scaleY"] = 16
+@main.route("/set_scales", methods=["POST"])
+def set_scales():
+    """Set the scales for the forecasted forcing dataset."""
+    data = json.loads(request.data.decode("utf-8"))
+    logger.info(f"Setting scales with data: {data}")
+    scaleX = data.get("scaleX")
+    scaleY = data.get("scaleY")
+    if scaleX is None or scaleY is None:
+        return jsonify({"error": "Missing required fields: scaleX, scaleY"}), 400
+    intra_module_db["scaleX"] = int(scaleX)
+    intra_module_db["scaleY"] = int(scaleY)
+    logger.info(f"Scales set to {scaleX} (X) and {scaleY} (Y)")
+    return jsonify({"message": "Scales set successfully"}), 200
 
 import traceback
 
@@ -148,6 +163,8 @@ def get_forecast_precip():
     selected_time = intra_module_db.get("selected_time")
     forecast_cycle = intra_module_db.get("forecast_cycle")
     lead_time = intra_module_db.get("lead_time")
+    scaleX = intra_module_db.get("scaleX", 16)
+    scaleY = intra_module_db.get("scaleY", 16)
 
     if not selected_time or not forecast_cycle or not lead_time:
         return jsonify({"error": "Forecast arguments not set"}), 400
@@ -164,8 +181,7 @@ def get_forecast_precip():
             date=selected_time, fcst_cycle=forecast_cycle, lead_time=lead_time
         )
         intra_module_db["forecasted_forcing_dataset"] = dataset
-        scaleX = dataset.attrs.get("scaleX", 16)
-        scaleY = dataset.attrs.get("scaleY", 16)
+        
         rescaled_dataset = rescale_dataset(dataset, scaleX, scaleY)
         intra_module_db["rescaled_forecasted_forcing_dataset"] = rescaled_dataset
         # precip_data = dataset["RAINRATE"]
@@ -207,6 +223,7 @@ def get_forecast_precip():
         reprojected_points = [reproject_points(dataset, row) for row in points]
         # Now we can create the data_dict with reprojected points and values
         data_dict = {"points": reprojected_points, "values": values}
+        intra_module_db["forecasted_forcing_data_dict"] = data_dict
         # print(f"Data dict created with {len(data_dict)} entries. Converting to JSON.")
         # data_dict["precip_data"] = precip_data_np.tolist()  # Convert to list for JSON serialization
         # data_dict["x_coords"] = x_coords.tolist()  # Convert to list for JSON serialization
@@ -246,8 +263,10 @@ def get_forecast_precip():
 def get_forecasted_forcing_grid():
     """Get forecasting gridlines to display on the map."""
     start_command = perf_counter()
-    horiz_gridlines = get_forecasting_gridlines_horiz_projected()
-    vert_gridlines = get_forecasting_gridlines_vert_projected()
+    scaleX = intra_module_db.get("scaleX", 16)
+    scaleY = intra_module_db.get("scaleY", 16)
+    horiz_gridlines = get_forecasting_gridlines_horiz_projected(scaleX, scaleY)
+    vert_gridlines = get_forecasting_gridlines_vert_projected(scaleX, scaleY)
     if horiz_gridlines is None or vert_gridlines is None:
         logger.error(
             f"Failed to load forecasting gridlines in {perf_counter() - start_command:.2f} seconds"
@@ -257,3 +276,23 @@ def get_forecasted_forcing_grid():
         f"Forecasting gridlines loaded successfully in {perf_counter() - start_command:.2f} seconds"
     )
     return jsonify({"horiz_gridlines": horiz_gridlines, "vert_gridlines": vert_gridlines}), 200
+
+@main.route("/tryget_resume_session", methods=["GET"])
+def tryget_resume_session():
+    """On load, the page checks if there is a session to resume. We send back any relevant data."""
+    if "forecasted_forcing_data_dict" in intra_module_db:
+        data_json = json.dumps(intra_module_db["forecasted_forcing_data_dict"], default=str)
+        result_dict = {
+            # "forecasted_forcing_data_dict": data_json,
+            "selected_time": intra_module_db.get("selected_time"),
+            "forecast_cycle": intra_module_db.get("forecast_cycle"),
+            "lead_time": intra_module_db.get("lead_time"),
+            "scaleX": intra_module_db.get("scaleX", 16),
+            "scaleY": intra_module_db.get("scaleY", 16),
+        }
+        result_dict["forecasted_forcing_data_dict"] = data_json
+        logger.info("Resuming session with data: %s", result_dict)
+        return jsonify(result_dict), 200
+    else:
+        return jsonify({"error": "No session data found"}), 404
+    

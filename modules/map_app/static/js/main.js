@@ -222,61 +222,151 @@ function initializeToggleSwitches() {
 }
 document.addEventListener("DOMContentLoaded", initializeToggleSwitches);
 
-showGages = false;
-const toggleButtonGages = document.querySelector("#toggle-button-gages");
-toggleButtonGages.addEventListener("click", () => {
-  if (showGages) {
-    map.setFilter("conus_gages", ["any", ["==", "hl_uri", ""]]);
-    toggleButtonGages.innerText = "Show gages";
-    showGages = false;
-  } else {
-    map.setFilter("conus_gages", null);
-    toggleButtonGages.innerText = "Hide gages";
-    showGages = true;
+function createToggleButton(buttonId, defaultText) {
+  // Create, insert, and return a toggle button
+  const button = document.createElement("button");
+  button.id = buttonId;
+  if (buttonId.startsWith("#")) {
+    // # is a selector, not an ID
+    button.id = buttonId.slice(1);
   }
-});
+  button.textContent = defaultText;
+  button.className = "toggle-button";
+  const optionsContent = document.querySelector("#options-content");
+  if (optionsContent) {
+    optionsContent.appendChild(button);
+  } else {
+    console.warn("Options content not found. Cannot append toggle button.");
+  }
+  return button;
+}
 
-showCamels = false;
-const toggleButtonCamels = document.querySelector("#toggle-button-camels");
-toggleButtonCamels.addEventListener("click", () => {
-  if (showCamels) {
-    map.setFilter("camels", ["any", ["==", "hru_id", ""]]);
-    toggleButtonCamels.innerText = "Show CAMELS basins";
-    showCamels = false;
-  } else {
-    map.setFilter("camels", null);
-    toggleButtonCamels.innerText = "Hide CAMELS basins";
-    showCamels = true;
+var toggleShows = {};
+var toggleFunctions = {}; // Storing functions allows us to call them ourselves if needed
+function setupToggleButton(buttonId, layerId, toggleKey, filterCondition, showText, hideText) {
+  var toggleButton = document.querySelector(buttonId);
+  if (!toggleButton) {
+    // console.warn(`Toggle button with ID ${buttonId} not found.`);
+    // return;
+    // Create a new toggle button if it doesn't exist
+    toggleButton = createToggleButton(buttonId, showText);
   }
-});
+  if (toggleShows[toggleKey] === undefined) {
+    toggleShows[toggleKey] = false; // Initialize the toggle state
+  }
+  // toggleButton.addEventListener("click", () => {
+  //   if (toggleShows[toggleKey]) {
+  //     map.setFilter(layerId, filterCondition);
+  //     toggleButton.innerText = showText;
+  //     toggleShows[toggleKey] = false;
+  //   } else {
+  //     map.setFilter(layerId, null);
+  //     toggleButton.innerText = hideText;
+  //     toggleShows[toggleKey] = true;
+  //   }
+  // });
+  toggleFunctions[toggleKey] = () => {
+    if (toggleShows[toggleKey]) {
+      map.setFilter(layerId, filterCondition);
+      toggleButton.innerText = showText;
+      toggleShows[toggleKey] = false;
+    } else {
+      map.setFilter(layerId, null);
+      toggleButton.innerText = hideText;
+      toggleShows[toggleKey] = true;
+    }
+  };
+  toggleButton.addEventListener("click", toggleFunctions[toggleKey]);
+}
 
-showNwm = false;
-const toggleButtonNwm = document.querySelector("#toggle-button-nwm");
-toggleButtonNwm.addEventListener("click", () => {
-  if (showNwm) {
-    map.setFilter("nwm_zarr_chunks", ["any"]);
-    toggleButtonNwm.innerText = "Overlay NWM chunks";
-    showNwm = false;
-  } else {
-    map.setFilter("nwm_zarr_chunks", null);
-    toggleButtonNwm.innerText = "Hide NWM chunks";
-    showNwm = true;
-  }
-});
+// showGages = false;
+// const toggleButtonGages = document.querySelector("#toggle-button-gages");
+// toggleButtonGages.addEventListener("click", () => {
+//   if (showGages) {
+//     map.setFilter("conus_gages", ["any", ["==", "hl_uri", ""]]);
+//     toggleButtonGages.innerText = "Show gages";
+//     showGages = false;
+//   } else {
+//     map.setFilter("conus_gages", null);
+//     toggleButtonGages.innerText = "Hide gages";
+//     showGages = true;
+//   }
+// });
+setupToggleButton(
+  "#toggle-button-gages",
+  "conus_gages",
+  "showGages",
+  ["any", ["==", "hl_uri", ""]],
+  "Show gages",
+  "Hide gages"
+)
 
-showAorc = false;
-const toggleButtonAorc = document.querySelector("#toggle-button-aorc");
-toggleButtonAorc.addEventListener("click", () => {
-  if (showAorc) {
-    map.setFilter("aorc_zarr_chunks", ["any"]);
-    toggleButtonAorc.innerText = "Overlay AORC chunks";
-    showAorc = false;
-  } else {
-    map.setFilter("aorc_zarr_chunks", null);
-    toggleButtonAorc.innerText = "Hide AORC chunks";
-    showAorc = true;
-  }
-});
+
+// showCamels = false;
+// const toggleButtonCamels = document.querySelector("#toggle-button-camels");
+// toggleButtonCamels.addEventListener("click", () => {
+//   if (showCamels) {
+//     map.setFilter("camels", ["any", ["==", "hru_id", ""]]);
+//     toggleButtonCamels.innerText = "Show CAMELS basins";
+//     showCamels = false;
+//   } else {
+//     map.setFilter("camels", null);
+//     toggleButtonCamels.innerText = "Hide CAMELS basins";
+//     showCamels = true;
+//   }
+// });
+setupToggleButton(
+  "#toggle-button-camels",
+  "camels",
+  "showCamels",
+  ["any", ["==", "hru_id", ""]],
+  "Show CAMELS basins",
+  "Hide CAMELS basins"
+)
+
+// showNwm = false;
+// const toggleButtonNwm = document.querySelector("#toggle-button-nwm");
+// toggleButtonNwm.addEventListener("click", () => {
+//   if (showNwm) {
+//     map.setFilter("nwm_zarr_chunks", ["any"]);
+//     toggleButtonNwm.innerText = "Overlay NWM chunks";
+//     showNwm = false;
+//   } else {
+//     map.setFilter("nwm_zarr_chunks", null);
+//     toggleButtonNwm.innerText = "Hide NWM chunks";
+//     showNwm = true;
+//   }
+// });
+setupToggleButton(
+  "#toggle-button-nwm",
+  "nwm_zarr_chunks",
+  "showNwm",
+  ["any"],
+  "Overlay NWM chunks",
+  "Hide NWM chunks"
+);
+
+// showAorc = false;
+// const toggleButtonAorc = document.querySelector("#toggle-button-aorc");
+// toggleButtonAorc.addEventListener("click", () => {
+//   if (showAorc) {
+//     map.setFilter("aorc_zarr_chunks", ["any"]);
+//     toggleButtonAorc.innerText = "Overlay AORC chunks";
+//     showAorc = false;
+//   } else {
+//     map.setFilter("aorc_zarr_chunks", null);
+//     toggleButtonAorc.innerText = "Hide AORC chunks";
+//     showAorc = true;
+//   }
+// });
+setupToggleButton(
+  "#toggle-button-aorc",
+  "aorc_zarr_chunks",
+  "showAorc",
+  ["any"],
+  "Overlay AORC chunks",
+  "Hide AORC chunks"
+)
 
 
 // Set up the map overlay for forecasted precipitation
@@ -304,57 +394,65 @@ map.on("load", () => {
 });
 
 // Populate the forecasting gridlines on the map
+function updateForecastingGridlines() {
+  // Fetch the forecasting gridlines data from the server
+  // This function returns a promise that resolves to true if the gridlines were updated successfully
+  // If the data is not available, it will log an error and return false
+  // This allows us to have logic based on the success or failure of the request
+  return fetch('/get_forecasted_forcing_grid')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Forecasting gridlines data received:', data);
+      const features = [];
+      // Process horizontal gridlines
+      // Each line is an array of tuples [x, y]
+      data.horiz_gridlines.forEach(line => {
+        features.push({
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: line.map(point => [point[0], point[1]]),
+          },
+          properties: {
+            // color: "rgba(255, 0, 0, 1)" // Red color for horizontal lines
+            color: "rgba(0, 0, 255, 1)" // Blue color for horizontal lines
+          }
+        });
+      });
+      // Process vertical gridlines
+      data.vert_gridlines.forEach(line => {
+        features.push({
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: line.map(point => [point[0], point[1]]),
+          },
+          properties: {
+            color: "rgba(0, 0, 255, 1)" // Blue color for vertical lines
+          }
+        });
+      });
+      // Update the source data
+      map.getSource("forecasting_gridlines").setData({
+        type: "FeatureCollection",
+        features: features
+      });
+      // We were successful, return true
+      console.log('Forecasting gridlines updated successfully.');
+      return true;
+    })
+    .catch(error => {
+      console.error('Error fetching forecasting gridlines data:', error);
+    });
+}
 show_gridlines = true;
 if (show_gridlines) {
-  map.on("load", () => {
-    fetch('/get_forecasted_forcing_grid')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Forecasting gridlines data received:', data);
-        const features = [];
-        // Process horizontal gridlines
-        // Each line is an array of tuples [x, y]
-        data.horiz_gridlines.forEach(line => {
-          features.push({
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: line.map(point => [point[0], point[1]]),
-            },
-            properties: {
-              // color: "rgba(255, 0, 0, 1)" // Red color for horizontal lines
-              color: "rgba(0, 0, 255, 1)" // Blue color for horizontal lines
-            }
-          });
-        });
-        // Process vertical gridlines
-        data.vert_gridlines.forEach(line => {
-          features.push({
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: line.map(point => [point[0], point[1]]),
-            },
-            properties: {
-              color: "rgba(0, 0, 255, 1)" // Blue color for vertical lines
-            }
-          });
-        });
-        // Update the source data
-        map.getSource("forecasting_gridlines").setData({
-          type: "FeatureCollection",
-          features: features
-        });
-      })
-      .catch(error => {
-        console.error('Error fetching forecasting gridlines data:', error);
-      });
-  });
+  map.on("load", updateForecastingGridlines); // Load gridlines on map load
 }
 
 map.on("load", () => {
@@ -377,23 +475,38 @@ map.on("load", () => {
   });
 });
 
-showForecastedPrecip = false
-const toggleButtonForecastedPrecip = document.querySelector("#toggle-button-forecast");
-toggleButtonForecastedPrecip.addEventListener("click", () => {
-  if (showForecastedPrecip) {
-    map.setFilter("forecasted_precip_layer", ["==", "color", ""]);
-    toggleButtonForecastedPrecip.innerText = "Show forecasted precipitation";
-    showForecastedPrecip = false;
-  } else {
-    map.setFilter("forecasted_precip_layer", null);
-    toggleButtonForecastedPrecip.innerText = "Hide forecasted precipitation";
-    showForecastedPrecip = true;
-  }
-});
+// showForecastedPrecip = false
+// const toggleButtonForecastedPrecip = document.querySelector("#toggle-button-forecast");
+// toggleButtonForecastedPrecip.addEventListener("click", () => {
+//   if (showForecastedPrecip) {
+//     map.setFilter("forecasted_precip_layer", ["==", "color", ""]);
+//     toggleButtonForecastedPrecip.innerText = "Show forecasted precipitation";
+//     showForecastedPrecip = false;
+//   } else {
+//     map.setFilter("forecasted_precip_layer", null);
+//     toggleButtonForecastedPrecip.innerText = "Hide forecasted precipitation";
+//     showForecastedPrecip = true;
+//   }
+// });
+setupToggleButton(
+  "#toggle-button-forecast",
+  "forecasted_precip_layer",
+  "showForecastedPrecip",
+  ["==", "color", ""],
+  "Show forecasted precipitation",
+  "Hide forecasted precipitation"
+);
+
+// toggleFunctions["showForecastedPrecip"](); // Start with it shown
+// document.addEventListener("DOMContentLoaded", toggleFunctions["showForecastedPrecip"]); // Start with it shown
+map.on("load", toggleFunctions["showForecastedPrecip"]); // Start with it shown
 
 // Function to update the forecasted precipitation overlay with received data
 var receivedData = null;
 function updateForecastLayer(data) {
+  if (typeof data === 'string') {
+    data = JSON.parse(data); // Ensure data is parsed correctly
+  }
   receivedData = data;
   // // Data is an object of precipitation values keyed by a composite string of "x,y"
   // const minValue = Math.min(...Object.values(data));
@@ -479,7 +592,11 @@ function updateForecastLayer(data) {
 // Accessing forecasted forcing data
 
 function updateForecastedPrecipOverlay() {
-  fetch('/get_forecast_precip', {
+  // Fetch the forecasted precipitation data from the server
+  // This function returns a promise that resolves to true if the overlay was updated successfully
+  // If the data is not available, it will log an error and return false
+  // This allows us to have logic based on the success or failure of the request
+  return fetch('/get_forecast_precip', {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
@@ -498,15 +615,117 @@ function updateForecastedPrecipOverlay() {
       console.log('Forecasted precipitation data received:', data);
       // Update the map overlay with the received data
       updateForecastLayer(data);
+      // We were successful, return true
+      console.log('Forecasted precipitation overlay updated successfully.');
+      return true;
     })
     .catch(error => {
       console.error('Error fetching forecasted precipitation data:', error);
     });
 }
 
+function sendScaleValues(scaleX, scaleY) {
+  // Takes scaleX and scaleY as strings, sends them to the server
+  // Returns a promise that resolves to the response from the server
+  // This allows us to have logic based on the success or failure of the request
+  return fetch('/set_scales', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      scaleX: scaleX,
+      scaleY: scaleY
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    });
+}
+
+function setScaleLogic() {
+  // Get the temporary scale values from scale-y-value and scale-x-value spans
+  // Then we try to set the scale values server-side.
+  // If it succeeds, we try to update the map with the new scale values.
+  // If that succeeds, we update the scale values in the UI.
+  const scaleX = document.getElementById('scale-x-value').textContent;
+  const scaleY = document.getElementById('scale-y-value').textContent;
+  const oldScaleX = document.getElementById('set-scale-x-value').textContent;
+  const oldScaleY = document.getElementById('set-scale-y-value').textContent
+  // Check if the scale values have changed
+  if (scaleX === oldScaleX && scaleY === oldScaleY) {
+    console.log('Scale values have not changed, skipping update.');
+    return; // No need to update if the values haven't changed
+  }
+  console.log('Setting scale to:', scaleX, scaleY);
+  // return sendScaleValues(scaleX, scaleY)
+  //   .then(data => {
+  //     console.log('Scale set successfully:', data);
+  //     // Update the UI with the new scale values
+  //     document.getElementById('set-scale-x-value').textContent = scaleX;
+  //     document.getElementById('set-scale-y-value').textContent = scaleY;
+  //     // Update the map with the new scale values
+  //     map.setPaintProperty('forecasted_precip_layer', 'fill-extrusion-scale', [parseFloat(scaleX), parseFloat(scaleY)]);
+  //   })
+  //   .catch(error => {
+  //     console.error('Error setting scale:', error);
+  //   });
+  result = sendScaleValues(scaleX, scaleY);
+  result = result.then(data => {
+    if (data) {
+      console.log('Scale set successfully:', data);
+      console.log('Trying to update the gridlines with the new scale values');
+      return updateForecastingGridlines()
+    }
+    else {
+      throw new Error('Failed to set scale values');
+    }
+  });
+  // If the set-time values are set, we can try to update the forecasted precipitation overlay
+  var selectedTime = document.getElementById('selected-time').textContent;
+  var doForecastedPrecip = selectedTime !== "None";
+  result = result.then(data => {
+    if (data) {
+      console.log('Gridlines updated successfully with new scale values');
+      console.log('Trying to update the forecasted precipitation overlay with the new scale values');
+      if (doForecastedPrecip) {
+        return updateForecastedPrecipOverlay();
+      }
+      else {
+        console.log('Skipping forecasted precipitation overlay update as selected time is None');
+        return true; // Continue the promise chain
+      }
+    } else {
+      throw new Error('Failed to update gridlines with new scale values');
+    }
+  });
+  result = result.then(data => {
+    if (data) {
+      if (doForecastedPrecip) {
+        console.log('Forecasted precipitation overlay updated successfully with new scale values');
+      }
+      // Update the UI with the new scale values
+      document.getElementById('set-scale-x-value').textContent = scaleX;
+      document.getElementById('set-scale-y-value').textContent = scaleY;
+      console.log('Scale values updated in the UI:', scaleX, scaleY);
+    } else {
+      throw new Error('Failed to update forecasted precipitation overlay with new scale values');
+    }
+  });
+  result = result.catch(error => {
+    console.error('Error setting scale:', error);
+  });
+  return result; // Return the promise chain for further handling if needed
+}
 
 
+// set-scale button logic
+document.getElementById('set-scale').addEventListener('click', setScaleLogic);
 
+// set-time button logic
 document.getElementById('set-time').addEventListener('click', function () {
   const targetTime = document.getElementById('target-time').value;
   const leadTime = document.getElementById('lead-time').value;
@@ -562,3 +781,66 @@ document.getElementById('set-time').addEventListener('click', function () {
       });
   }
 });
+
+// On page load, we use the `tryget_resume_session` endpoint to check if there is a session to resume
+function updateWithResumedSession(data) {
+  if (!data) {
+    console.error('No data received for resumed session.');
+    return;
+  }
+  if (data.selected_time) {
+    var selectedTime = data.selected_time;
+    // Received value is YYYYMMDD, convert it to YYYY-MM-DDTHH:MM
+    selectedTime = selectedTime.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3T00:00');
+    document.getElementById('selected-time').textContent = selectedTime;
+    document.getElementById('target-time').value = selectedTime;
+  }
+  if (data.lead_time) {
+    document.getElementById('selected-lead-time').textContent = data.lead_time;
+    document.getElementById('lead-time').value = data.lead_time;
+  }
+  if (data.forecast_cycle) {
+    document.getElementById('selected-forecast-cycle').textContent = data.forecast_cycle;
+    document.getElementById('forecast-cycle').value = data.forecast_cycle;
+  }
+  if (data.scaleX) {
+    document.getElementById('set-scale-x-value').textContent = data.scaleX;
+  }
+  if (data.scaleY) {
+    document.getElementById('set-scale-y-value').textContent = data.scaleY;
+  }
+  if (data.forecasted_forcing_data_dict) {
+    console.log('Resuming session with forecasted forcing data:', data.forecasted_forcing_data_dict);
+    updateForecastLayer(data.forecasted_forcing_data_dict);
+  }
+  // If there are any other session data to resume, handle them here
+}
+
+// If response is 200, we update the page with the resumed session data
+// If response is 404, we do nothing, there is no session to resume
+function fetchResumeSession() {
+  fetch('/tryget_resume_session')
+    .then(response => {
+      if (response.status === 200) {
+        return response.json();
+      } else if (response.status === 404) {
+        console.log('No session to resume.');
+        return null;
+      } else {
+        throw new Error('Unexpected response status: ' + response.status);
+      }
+    })
+    .then(data => {
+      if (data) {
+        updateWithResumedSession(data);
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching resumed session data:', error);
+    }
+  );
+}
+// On page load, we check if there is a session to resume
+// document.addEventListener('DOMContentLoaded', fetchResumeSession);
+// still too early, errors due to map not being ready
+map.on('load', fetchResumeSession);
