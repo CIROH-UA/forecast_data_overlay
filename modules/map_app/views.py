@@ -12,14 +12,16 @@ from data_processing.graph_utils import get_upstream_cats, get_upstream_ids
 from flask import Blueprint, jsonify, render_template, request
 
 from forecasting_data.forecast_datasets import (
-    load_forecasted_forcing,
-    get_dataset_precip,
-    get_forecasting_gridlines_horiz_projected,
-    get_forecasting_gridlines_vert_projected,
-    rescale_dataset,
     reproject_points,
-    get_point_geometry,
     reproject_points_2d,
+)
+from forecasting_data.forcing_datasets import (
+    load_forecasted_forcing,
+    rescale_precip_dataset,
+    get_dataset_precip,
+    get_conus_forcing_gridlines_horiz_projected,
+    get_conus_forcing_gridlines_vert_projected,
+    get_point_geometry,
 )
 
 from time import perf_counter
@@ -140,8 +142,11 @@ def set_time():
     )
     return jsonify({"message": "Forecast arguments set successfully"}), 200
 
+
 intra_module_db["scaleX"] = 16
 intra_module_db["scaleY"] = 16
+
+
 @main.route("/set_scales", methods=["POST"])
 def set_scales():
     """Set the scales for the forecasted forcing dataset."""
@@ -155,6 +160,7 @@ def set_scales():
     intra_module_db["scaleY"] = int(scaleY)
     logger.info(f"Scales set to {scaleX} (X) and {scaleY} (Y)")
     return jsonify({"message": "Scales set successfully"}), 200
+
 
 import traceback
 
@@ -184,8 +190,8 @@ def get_forecast_precip():
             date=selected_time, fcst_cycle=forecast_cycle, lead_time=lead_time
         )
         intra_module_db["forecasted_forcing_dataset"] = dataset
-        
-        rescaled_dataset = rescale_dataset(dataset, scaleX, scaleY)
+
+        rescaled_dataset = rescale_precip_dataset(dataset, scaleX, scaleY)
         intra_module_db["rescaled_forecasted_forcing_dataset"] = rescaled_dataset
         # precip_data = dataset["RAINRATE"]
         data_dict = {}
@@ -209,11 +215,11 @@ def get_forecast_precip():
         # Precip data is now a 2D numpy array with shape (x, y)
         after_helper_access = perf_counter()
         print(f"Accessing precip data took {after_helper_access - before_access:.2f} seconds")
-        
+
         # Lambda function for whether to skip a value
         # we want to skip values that are NaN or excessively close to zero
         skip_value = lambda v: isnan(v) or isclose(v, 0.0, atol=1e-6)
-        
+
         # # Now we can iterate over the numpy array and create the data_dict
         # points = []
         # values = []
@@ -246,9 +252,7 @@ def get_forecast_precip():
                 if skip_value(value):
                     continue
                 # Get the geometry for the point
-                geom = get_point_geometry(
-                    x, y, scaleX=scaleX, scaleY=scaleY
-                )
+                geom = get_point_geometry(x, y, scaleX=scaleX, scaleY=scaleY)
                 geoms.append(geom)
                 values.append(value)
         after_points_creation = perf_counter()
@@ -285,9 +289,7 @@ def get_forecast_precip():
         #     geoms_reprojected += 1
         #     reprojected_geom = reproject_points(dataset, geom)
         #     reprojected_geoms.append(reprojected_geom)
-        reprojected_geoms = reproject_points_2d(
-            dataset, geoms
-        )  # Reproject all geometries at once
+        reprojected_geoms = reproject_points_2d(dataset, geoms)  # Reproject all geometries at once
         after_reprojection = perf_counter()
         print(f"Reprojecting points took {after_reprojection - after_points_creation:.2f} seconds")
         # Now we can create the data_dict with reprojected points and values
@@ -338,8 +340,8 @@ def get_forecasted_forcing_grid():
     start_command = perf_counter()
     scaleX = intra_module_db.get("scaleX", 16)
     scaleY = intra_module_db.get("scaleY", 16)
-    horiz_gridlines = get_forecasting_gridlines_horiz_projected(scaleX, scaleY)
-    vert_gridlines = get_forecasting_gridlines_vert_projected(scaleX, scaleY)
+    horiz_gridlines = get_conus_forcing_gridlines_horiz_projected(scaleX, scaleY)
+    vert_gridlines = get_conus_forcing_gridlines_vert_projected(scaleX, scaleY)
     if horiz_gridlines is None or vert_gridlines is None:
         logger.error(
             f"Failed to load forecasting gridlines in {perf_counter() - start_command:.2f} seconds"
@@ -349,6 +351,7 @@ def get_forecasted_forcing_grid():
         f"Forecasting gridlines loaded successfully in {perf_counter() - start_command:.2f} seconds"
     )
     return jsonify({"horiz_gridlines": horiz_gridlines, "vert_gridlines": vert_gridlines}), 200
+
 
 @main.route("/tryget_resume_session", methods=["GET"])
 def tryget_resume_session():
@@ -368,4 +371,3 @@ def tryget_resume_session():
         return jsonify(result_dict), 200
     else:
         return jsonify({"error": "No session data found"}), 404
-    
