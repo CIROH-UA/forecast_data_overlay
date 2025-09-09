@@ -246,7 +246,7 @@ function updateForecastedPrecipOverlay() {
   // If the data is not available, it will log an error and return false
   // This allows us to have logic based on the success or failure of the request
   return fetch('/get_forecast_precip', {
-    method: 'GET',
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     }
@@ -339,16 +339,16 @@ function setScaleLogic() {
   //     console.error('Error setting scale:', error);
   //   });
   result = sendScaleValues(scaleX, scaleY);
-  result = result.then(data => {
-    if (data) {
-      console.log('Scale set successfully:', data);
-      console.log('Trying to update the gridlines with the new scale values');
-      return updateForecastingGridlines()
-    }
-    else {
-      throw new Error('Failed to set scale values');
-    }
-  });
+  // result = result.then(data => {
+  //   if (data) {
+  //     console.log('Scale set successfully:', data);
+  //     console.log('Trying to update the gridlines with the new scale values');
+  //     return updateForecastingGridlines()
+  //   }
+  //   else {
+  //     throw new Error('Failed to set scale values');
+  //   }
+  // });
   // If the set-time values are set, we can try to update the forecasted precipitation overlay
   var selectedTime = document.getElementById('selected-time').textContent;
   var doForecastedPrecip = selectedTime !== "None";

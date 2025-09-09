@@ -26,6 +26,17 @@ function updateWithResumedSession(data) {
   if (data.scaleY) {
     document.getElementById('set-scale-y-value').textContent = data.scaleY;
   }
+  if (data.rowMin&&data.rowMax&&data.colMin&&data.colMax) {
+    externalSetRegionBounds(
+      data.regionRowMin, data.regionRowMax,
+      data.regionColMin, data.regionColMax,
+      16, 16
+    )
+    externalSetRegionValues(
+      data.rowMin, data.rowMax,
+      data.colMin, data.colMax
+    )
+  }
   if (data.forecasted_forcing_data_dict) {
     console.log('Resuming session with forecasted forcing data:', data.forecasted_forcing_data_dict);
     updateForecastLayer(data.forecasted_forcing_data_dict);

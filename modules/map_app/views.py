@@ -22,6 +22,7 @@ from forecasting_data.forcing_datasets import (
     get_conus_forcing_gridlines_horiz_projected,
     get_conus_forcing_gridlines_vert_projected,
     get_point_geometry,
+    get_simple_point_geometry,
     load_forecasted_forcing_with_options,
 )
 
@@ -172,6 +173,10 @@ def set_region_bounds():
     rowMax = data.get("rowMax")
     colMin = data.get("colMin")
     colMax = data.get("colMax")
+    regionRowMin = intra_module_db.get("regionRowMin", 0)
+    regionRowMax = intra_module_db.get("regionRowMax", 0)
+    regionColMin = intra_module_db.get("regionColMin", 0)
+    regionColMax = intra_module_db.get("regionColMax", 0)
     missing = []
     if rowMin is None:
         missing.append("rowMin")
@@ -187,6 +192,10 @@ def set_region_bounds():
     intra_module_db["rowMax"] = int(rowMax)
     intra_module_db["colMin"] = int(colMin)
     intra_module_db["colMax"] = int(colMax)
+    intra_module_db["regionRowMin"] = regionRowMin
+    intra_module_db["regionRowMax"] = regionRowMax
+    intra_module_db["regionColMin"] = regionColMin
+    intra_module_db["regionColMax"] = regionColMax
     logger.info(f"Region bounds set to rows {rowMin}-{rowMax} and cols {colMin}-{colMax}")
     return jsonify({"message": "Region bounds set successfully"}), 200
 
@@ -356,6 +365,8 @@ else:
             "colMax": colMax,
         }
         t1 = perf_counter()  # After reading request data / intra_module_db
+        if t1 - t0 > 1.0:
+            print(f"Reading request data took {t1 - t0:.2f} seconds")
         violations = []
         if not selected_time or not forecast_cycle or not lead_time:
             # return jsonify({"error": "Forecast arguments not set"}), 400
@@ -401,14 +412,20 @@ else:
         if violations:
             return jsonify({"error": " ; ".join(violations)}), 400
         t2 = perf_counter()  # After validation
+        if t2 - t1 > 1.0:
+            print(f"Validating request data took {t2 - t1:.2f} seconds")
         intable_args = {k: int(v) if v is not None else None for k, v in intable_args.items()}
 
         precip_data_array, transformer = load_forecasted_forcing_with_options(
             date=selected_time,
             **intable_args,
         )
+        precip_data_array_np = precip_data_array.to_numpy()
 
         t3 = perf_counter()  # After data loading
+        if t3 - t2 > 1.0:
+            print(f"Loading forecasted forcing took {t3 - t2:.2f} seconds")
+        print(f"Finished loading data at {t3 - t0:.2f} seconds since start")
         if precip_data_array is None:
             return jsonify({"error": "Failed to load forecasted precipitation data"}), 500
         data_dict = {
@@ -421,16 +438,24 @@ else:
         for t in range(precip_data_array.shape[0]):
             for y in range(precip_data_array.shape[1]):
                 for x in range(precip_data_array.shape[2]):
-                    value = precip_data_array[t, y, x]
+                    if len(geoms)==0:
+                        print(f"Processing first data point at {perf_counter() - t0:.2f} seconds since start")
+                    value = precip_data_array_np[t, y, x]
                     if isnan(value) or isclose(value, 0.0, atol=1e-6):
                         continue
-                    geom = get_point_geometry(x, y, scaleX=scaleX, scaleY=scaleY)
+                    x_coord = precip_data_array.x[x].item()
+                    y_coord = precip_data_array.y[y].item()
+                    # Get the geometry for the point
+                    geom = get_simple_point_geometry(x_coord, y_coord, baseWidth=1000, scaleX=scaleX, scaleY=scaleY)
                     geoms.append(geom)
                     values.append(value)
         reprojected_geoms = reproject_points_2d(transformer, geoms)
         data_dict["geometries"] = reprojected_geoms
         data_dict["values"] = values
         t4 = perf_counter()  # After data processing
+        if t4 - t3 > 1.0:
+            print(f"Processing data took {t4 - t3:.2f} seconds")
+        print(f"Processed data at {t4 - t0:.2f} seconds since start")
         # Save to intra_module_db for potential session resumption
         intra_module_db["forecasted_forcing_data_dict"] = data_dict
         intra_module_db["selected_time"] = selected_time
@@ -443,8 +468,12 @@ else:
         intra_module_db["colMin"] = colMin
         intra_module_db["colMax"] = colMax
         t5 = perf_counter()  # After saving to intra_module_db
+        if t5 - t4 > 1.0:
+            print(f"Saving to intra_module_db took {t5 - t4:.2f} seconds")
         data_json = json.dumps(data_dict, default=str)
         t6 = perf_counter()  # After JSON conversion
+        if t6 - t5 > 1.0:
+            print(f"Converting to JSON took {t6 - t5:.2f} seconds")
         logger.info(
             (
                 f"Forecasted precipitation data loaded successfully in {t6 - t0:.2f} seconds for {selected_time} ; {forecast_cycle} ; {lead_time} "
@@ -458,10 +487,16 @@ else:
 def get_forecasted_forcing_grid():
     """Get forecasting gridlines to display on the map."""
     start_command = perf_counter()
-    scaleX = intra_module_db.get("scaleX", 16)
-    scaleY = intra_module_db.get("scaleY", 16)
+    # scaleX = intra_module_db.get("scaleX", 16)
+    # scaleY = intra_module_db.get("scaleY", 16)
+    scaleX = 16
+    scaleY = 16
     horiz_gridlines = get_conus_forcing_gridlines_horiz_projected(scaleX, scaleY)
     vert_gridlines = get_conus_forcing_gridlines_vert_projected(scaleX, scaleY)
+    intra_module_db["regionRowMin"] = 0
+    intra_module_db["regionRowMax"] = (len(horiz_gridlines) - 1) * scaleY
+    intra_module_db["regionColMin"] = 0
+    intra_module_db["regionColMax"] = (len(vert_gridlines) - 1) * scaleX
     if horiz_gridlines is None or vert_gridlines is None:
         logger.error(
             f"Failed to load forecasting gridlines in {perf_counter() - start_command:.2f} seconds"
@@ -496,6 +531,10 @@ def tryget_resume_session():
             "rowMax": intra_module_db.get("rowMax", 0),
             "colMin": intra_module_db.get("colMin", 0),
             "colMax": intra_module_db.get("colMax", 0),
+            "regionRowMin": intra_module_db.get("regionRowMin", 0),
+            "regionRowMax": intra_module_db.get("regionRowMax", 0),
+            "regionColMin": intra_module_db.get("regionColMin", 0),
+            "regionColMax": intra_module_db.get("regionColMax", 0),
         }
         logger.info("Resuming session with data: %s", result_dict)
         result_dict["forecasted_forcing_data_dict"] = data_json

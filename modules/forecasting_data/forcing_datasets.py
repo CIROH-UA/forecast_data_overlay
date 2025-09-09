@@ -428,6 +428,37 @@ def get_point_geometry(
     # Return the geometry as a list of tuples
     return geometry
 
+@cache
+def get_simple_point_geometry(
+    x_coord: float,
+    y_coord: float,
+    baseWidth: int = 1000,
+    scaleX: int = 16,
+    scaleY: int = 16,
+) -> List[Tuple[float, float]]:
+    """
+    Get the unprojected square geometry for a point at the specified x, y coordinates.
+    Args:
+        x_coord (float): The x coordinate of the point.
+        y_coord (float): The y coordinate of the point.
+        baseWidth (int): The base width of the square at scale 1 (default is 1000).
+        scaleX (int): The number of x points to collapse into one.
+        scaleY (int): The number of y points to collapse into one.
+    Returns:
+        List[Tuple[float, float]]: A list of tuples representing the coordinates of the square geometry.
+    """
+    xWidth = baseWidth * scaleX
+    yWidth = baseWidth * scaleY
+    # Calculate the coordinates of the square geometry
+    geometry = [
+        (x_coord - xWidth / 2, y_coord - yWidth / 2),  # Bottom-left
+        (x_coord + xWidth / 2, y_coord - yWidth / 2),  # Bottom-right
+        (x_coord + xWidth / 2, y_coord + yWidth / 2),  # Top-right
+        (x_coord - xWidth / 2, y_coord + yWidth / 2),  # Top-left
+    ]
+    # Return the geometry as a list of tuples
+    return geometry
+
 
 def uncached_get_point_geometry(
     x: int,
@@ -493,9 +524,11 @@ def load_forecasted_forcing_with_options(
     dataset = load_forecasted_forcing(date=date, fcst_cycle=fcst_cycle, lead_time=lead_time)
     precip_data = dataset["RAINRATE"]
     if all(v is not None for v in [rowMin, rowMax, colMin, colMax]):
-        precip_data = precip_data[:, rowMin:rowMax, colMin:colMax]
+        rangeAdjustX = 16 if scaleX is not None else scaleX
+        rangeAdjustY = 16 if scaleY is not None else scaleY
+        precip_data = precip_data[:, rowMin:rowMax-rangeAdjustY, colMin:colMax-rangeAdjustX]
     if scaleX is not None and scaleY is not None:
-        precip_data = precip_data.coarsen(x=scaleX, y=scaleY, boundary="exact").mean()
+        precip_data = precip_data.coarsen(x=scaleX, y=scaleY, boundary="trim").mean()
     transformer = pyproj.Transformer.from_crs(
         get_precip_projection(dataset), "EPSG:4326", always_xy=True
     )
