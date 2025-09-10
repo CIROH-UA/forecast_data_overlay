@@ -149,6 +149,7 @@ function setupMinMaxSliders(parentDivId) {
 const rowElements = setupMinMaxSliders("region-row-selection");
 const colElements = setupMinMaxSliders("region-col-selection");
 
+
 function updateSetValues() {
     rowElements.minValueSetter();
     rowElements.maxValueSetter();
@@ -303,3 +304,14 @@ document.getElementById("set-region").addEventListener("click", () => {
     sendSelectedRegion();
     console.log("Target region bounds set to:", targetRegionBounds);
 });
+
+externalSetRegionBounds(
+    0, 3840,
+    0, 4608,
+    16, 16
+)
+// colElements.minValueSetterExternal(1952);
+// colElements.maxValueSetterExternal(2416);
+// rowElements.minValueSetterExternal(656);
+// rowElements.maxValueSetterExternal(1264);
+externalSetRegionValues(656, 1264, 1952, 2416);
