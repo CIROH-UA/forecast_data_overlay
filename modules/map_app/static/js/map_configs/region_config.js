@@ -315,3 +315,7 @@ externalSetRegionBounds(
 // rowElements.minValueSetterExternal(656);
 // rowElements.maxValueSetterExternal(1264);
 externalSetRegionValues(656, 1264, 1952, 2416);
+// on load, send the initial region to the server
+map.on('load', () => {
+    sendSelectedRegion();
+});
