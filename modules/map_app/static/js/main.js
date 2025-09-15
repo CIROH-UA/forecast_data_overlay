@@ -122,3 +122,53 @@ map.on("click", "conus_gages", (e) => {
   );
 });
 
+/**
+ * Generalized function to request forecasted precipitation data from the server.
+ */
+function requestForecastedPrecip(
+  selected_time,
+  lead_time,
+  forecast_cycle,
+  scaleX = null,
+  scaleY = null,
+  rowMin = null,
+  rowMax = null,
+  colMin = null,
+  colMax = null
+) {
+  if (scaleX === null) {
+    scaleX = 16;
+  }
+  if (scaleY === null) {
+    scaleY = 16;
+  }
+  return fetch('/get_forecasted_precip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      selected_time: selected_time,
+      lead_time: lead_time,
+      forecast_cycle: forecast_cycle,
+      scaleX: scaleX,
+      scaleY: scaleY,
+      rowMin: rowMin,
+      rowMax: rowMax,
+      colMin: colMin,
+      colMax: colMax
+    }),
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Forecasted precipitation data received:', data);
+      return data;
+    })
+    .catch(error => {
+      console.error('Error fetching forecasted precipitation data:', error);
+      return null;
+    });
+}
