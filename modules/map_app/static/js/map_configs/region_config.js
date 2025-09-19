@@ -29,9 +29,9 @@ function setupMinMaxSliders(parentDivId) {
     minSliderSetValue.style.width = "30px";
     minSliderSetValue.innerText = "";
 
-    
 
-    
+
+
 
     // Create min container div for horizontal arrangement
     const minContainer = document.createElement("div");
@@ -181,7 +181,7 @@ var regionProperties = {
 
 function sendSelectedRegion() {
     const region = getSelectedRegion();
-    var send_object = { ...region};
+    var send_object = { ...region };
     // Include the region slider properties as well
     send_object["regionRowMin"] = regionProperties.minimumRow;
     send_object["regionRowMax"] = regionProperties.maximumRow;
@@ -195,21 +195,22 @@ function sendSelectedRegion() {
     local_cache["regionRowMax"] = regionProperties.maximumRow;
     local_cache["regionColMin"] = regionProperties.minimumCol;
     local_cache["regionColMax"] = regionProperties.maximumCol;
-    console.log("Sending selected region to server:", send_object);
-    fetch('/set_region_bounds', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(region),
-    })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Region bounds sent to server:', region);
-            console.log('Server response:', data);
-        })
-        .catch(error => {
-            console.error('Error sending region bounds to server:', error);
-        }
-    );
+    // console.log("Sending selected region to server:", send_object);
+    console.log("Saved selected region to local cache:", local_cache);
+    // fetch('/set_region_bounds', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(region),
+    // })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         console.log('Region bounds sent to server:', region);
+    //         console.log('Server response:', data);
+    //     })
+    //     .catch(error => {
+    //         console.error('Error sending region bounds to server:', error);
+    //     }
+    // );
 }
 
 
@@ -255,7 +256,7 @@ function setSliderProperties(sliderElements, min, max, step) {
         console.log("No current max value, setting to max:", max);
         sliderElements.maxSlider.value = max;
     }
-    
+
 
     // Update the displayed current and set values
     sliderElements.minSliderCurrentValue.innerText = sliderElements.minSlider.value;

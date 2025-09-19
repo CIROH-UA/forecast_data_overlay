@@ -12,68 +12,69 @@ document.getElementById('forecast-cycle').addEventListener('input', function () 
 
 // set-time button logic
 document.getElementById('set-time').addEventListener('click', function () {
-  const targetTime = document.getElementById('target-time').value;
-  const leadTime = document.getElementById('lead-time').value;
-  const forecastCycle = document.getElementById('forecast-cycle').value;
-  const prevTime = document.getElementById('selected-time').textContent;
-  const prevLeadTime = document.getElementById('selected-lead-time').textContent;
-  const prevForecastCycle = document.getElementById('selected-forecast-cycle').textContent
-  // var changed = false;
-  // // Check if any of the values have changed
-  // if (targetTime !== prevTime || leadTime !== prevLeadTime || forecastCycle !== prevForecastCycle) {
-  //   changed = true;
-  // }
-  var changed = true; 
-  console.log("Setting time to:", targetTime, leadTime, forecastCycle);
-  console.log("Previous time was:", prevTime, prevLeadTime, prevForecastCycle);
-  // If any of the values have changed, we proceed to set the time
-  // Just always treat as changed. 
-  // If they want to re-request the same time, that's fine.
-  if (changed) {
-    document.getElementById('selected-time').textContent = targetTime;
-    document.getElementById('selected-lead-time').textContent = leadTime;
-    document.getElementById('selected-forecast-cycle').textContent = forecastCycle;
+    const targetTime = document.getElementById('target-time').value;
+    const leadTime = document.getElementById('lead-time').value;
+    const forecastCycle = document.getElementById('forecast-cycle').value;
+    const prevTime = document.getElementById('selected-time').textContent;
+    const prevLeadTime = document.getElementById('selected-lead-time').textContent;
+    const prevForecastCycle = document.getElementById('selected-forecast-cycle').textContent
+    // var changed = false;
+    // // Check if any of the values have changed
+    // if (targetTime !== prevTime || leadTime !== prevLeadTime || forecastCycle !== prevForecastCycle) {
+    //   changed = true;
+    // }
+    var changed = true;
+    console.log("Setting time to:", targetTime, leadTime, forecastCycle);
+    console.log("Previous time was:", prevTime, prevLeadTime, prevForecastCycle);
+    // If any of the values have changed, we proceed to set the time
+    // Just always treat as changed. 
+    // If they want to re-request the same time, that's fine.
+    if (changed) {
+        document.getElementById('selected-time').textContent = targetTime;
+        document.getElementById('selected-lead-time').textContent = leadTime;
+        document.getElementById('selected-forecast-cycle').textContent = forecastCycle;
 
-    // Need to send the time as YYYYMMDD, but input provides it as YYYY-MM-DDTHH:MM
-    var formattedTime = targetTime.replace(/-/g, '');
-    const Tindex = formattedTime.indexOf('T');
-    if (Tindex !== -1) {
-      formattedTime = formattedTime.substring(0, Tindex);
-    }
-
-    local_cache["target_time"] = formattedTime;
-    local_cache["lead_time"] = leadTime;
-    local_cache["forecast_cycle"] = forecastCycle;
-
-
-
-    // Trigger the time change event
-    fetch('/set_time', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        target_time: formattedTime,
-        lead_time: leadTime,
-        forecast_cycle: forecastCycle
-      })
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+        // Need to send the time as YYYYMMDD, but input provides it as YYYY-MM-DDTHH:MM
+        var formattedTime = targetTime.replace(/-/g, '');
+        const Tindex = formattedTime.indexOf('T');
+        if (Tindex !== -1) {
+            formattedTime = formattedTime.substring(0, Tindex);
         }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Time set successfully:', data);
-      })
-      .then(() => {
-        // Fetch and update the forecasted precipitation data
+
+        local_cache["target_time"] = formattedTime;
+        local_cache["lead_time"] = leadTime;
+        local_cache["forecast_cycle"] = forecastCycle;
+
+
+
+        // // Trigger the time change event
+        // fetch('/set_time', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify({
+        //         target_time: formattedTime,
+        //         lead_time: leadTime,
+        //         forecast_cycle: forecastCycle
+        //     })
+        // })
+        //     .then(response => {
+        //         if (!response.ok) {
+        //             throw new Error('Network response was not ok');
+        //         }
+        //         return response.json();
+        //     })
+        //     .then(data => {
+        //         console.log('Time set successfully:', data);
+        //     })
+        //     .then(() => {
+        //         // Fetch and update the forecasted precipitation data
+        //         updateForecastedPrecipOverlay();
+        //     })
+        //     .catch(error => {
+        //         console.error('Error setting time:', error);
+        //     });
         updateForecastedPrecipOverlay();
-      })
-      .catch(error => {
-        console.error('Error setting time:', error);
-      });
-  }
+    }
 });

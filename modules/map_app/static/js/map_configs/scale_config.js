@@ -44,73 +44,78 @@ function setScaleLogic() {
     const oldScaleX = document.getElementById('set-scale-x-value').textContent;
     const oldScaleY = document.getElementById('set-scale-y-value').textContent
     // Check if the scale values have changed
-    if (scaleX === oldScaleX && scaleY === oldScaleY) {
-        console.log('Scale values have not changed, skipping update.');
-        return; // No need to update if the values haven't changed
-    }
+    // if (scaleX === oldScaleX && scaleY === oldScaleY) {
+    //     console.log('Scale values have not changed, skipping update.');
+    //     return; // No need to update if the values haven't changed
+    // }
     console.log('Setting scale to:', scaleX, scaleY);
     result = sendScaleValues(scaleX, scaleY);
     // If the set-time values are set, we can try to update the forecasted precipitation overlay
-    var selectedTime = document.getElementById('selected-time').textContent;
-    var doForecastedPrecip = selectedTime !== "None";
-    result = result.then(data => {
-        if (data) {
-            console.log('Gridlines updated successfully with new scale values');
-            console.log('Trying to update the forecasted precipitation overlay with the new scale values');
-            if (doForecastedPrecip) {
-                return updateForecastedPrecipOverlay();
-            }
-            else {
-                console.log('Skipping forecasted precipitation overlay update as selected time is None');
-                return true; // Continue the promise chain
-            }
-        } else {
-            throw new Error('Failed to update gridlines with new scale values');
-        }
-    });
-    result = result.then(data => {
-        if (data) {
-            if (doForecastedPrecip) {
-                console.log('Forecasted precipitation overlay updated successfully with new scale values');
-            }
-            // Update the UI with the new scale values
-            document.getElementById('set-scale-x-value').textContent = scaleX;
-            document.getElementById('set-scale-y-value').textContent = scaleY;
-            console.log('Scale values updated in the UI:', scaleX, scaleY);
-        } else {
-            throw new Error('Failed to update forecasted precipitation overlay with new scale values');
-        }
-    });
-    result = result.catch(error => {
-        console.error('Error setting scale:', error);
-    });
+    // var selectedTime = document.getElementById('selected-time').textContent;
+    // var doForecastedPrecip = selectedTime !== "None";
+    // result = result.then(data => {
+    //     if (data) {
+    //         console.log('Gridlines updated successfully with new scale values');
+    //         console.log('Trying to update the forecasted precipitation overlay with the new scale values');
+    //         if (doForecastedPrecip) {
+    //             return updateForecastedPrecipOverlay();
+    //         }
+    //         else {
+    //             console.log('Skipping forecasted precipitation overlay update as selected time is None');
+    //             return true; // Continue the promise chain
+    //         }
+    //     } else {
+    //         throw new Error('Failed to update gridlines with new scale values');
+    //     }
+    // });
+    // result = result.then(data => {
+    //     if (data) {
+    //         if (doForecastedPrecip) {
+    //             console.log('Forecasted precipitation overlay updated successfully with new scale values');
+    //         }
+    //         // Update the UI with the new scale values
+    //         document.getElementById('set-scale-x-value').textContent = scaleX;
+    //         document.getElementById('set-scale-y-value').textContent = scaleY;
+    //         console.log('Scale values updated in the UI:', scaleX, scaleY);
+    //     } else {
+    //         throw new Error('Failed to update forecasted precipitation overlay with new scale values');
+    //     }
+    // });
+    // result = result.catch(error => {
+    //     console.error('Error setting scale:', error);
+    // });
     return result; // Return the promise chain for further handling if needed
 }
 
 
 
 function sendScaleValues(scaleX, scaleY) {
-  // Takes scaleX and scaleY as strings, sends them to the server
-  // Returns a promise that resolves to the response from the server
-  // This allows us to have logic based on the success or failure of the request
-  local_cache["scaleX"] = scaleX;
-  local_cache["scaleY"] = scaleY;
-  return fetch('/set_scales', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      scaleX: scaleX,
-      scaleY: scaleY
-    })
-  })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    });
+    // Takes scaleX and scaleY as strings, sends them to the server
+    // Returns a promise that resolves to the response from the server
+    // This allows us to have logic based on the success or failure of the request
+    local_cache["scaleX"] = scaleX;
+    local_cache["scaleY"] = scaleY;
+    document.getElementById('set-scale-x-value').textContent = scaleX;
+    document.getElementById('set-scale-y-value').textContent = scaleY;
+    console.log('Set local cache scaleX and scaleY to:', scaleX, scaleY);
+    return Promise.resolve(true);
+    // If we wanted to actually send to the server, we would uncomment this code
+    //   return fetch('/set_scales', {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     },
+    //     body: JSON.stringify({
+    //       scaleX: scaleX,
+    //       scaleY: scaleY
+    //     })
+    //   })
+    //     .then(response => {
+    //       if (!response.ok) {
+    //         throw new Error('Network response was not ok');
+    //       }
+    //       return response.json();
+    //     });
 }
 
 

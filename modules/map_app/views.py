@@ -345,15 +345,15 @@ else:
         if request.data:
             request_data = json.loads(request.data.decode("utf-8"))
         # Also, try to enforce standardized keys on the intra_module_db and request_data
-        selected_time = request_data.get("selected_time") or intra_module_db.get("selected_time")
-        forecast_cycle = request_data.get("forecast_cycle") or intra_module_db.get("forecast_cycle")
-        lead_time = request_data.get("lead_time") or intra_module_db.get("lead_time")
-        scaleX = request_data.get("scaleX") or intra_module_db.get("scaleX", 16)
-        scaleY = request_data.get("scaleY") or intra_module_db.get("scaleY", 16)
-        rowMin = request_data.get("rowMin") or intra_module_db.get("rowMin", None)
-        rowMax = request_data.get("rowMax") or intra_module_db.get("rowMax", None)
-        colMin = request_data.get("colMin") or intra_module_db.get("colMin", None)
-        colMax = request_data.get("colMax") or intra_module_db.get("colMax", None)
+        selected_time = request_data.get("selected_time")
+        forecast_cycle = request_data.get("forecast_cycle")
+        lead_time = request_data.get("lead_time")
+        scaleX = request_data.get("scaleX")
+        scaleY = request_data.get("scaleY")
+        rowMin = request_data.get("rowMin")
+        rowMax = request_data.get("rowMax")
+        colMin = request_data.get("colMin")
+        colMax = request_data.get("colMax")
         intable_args = {  # Reformat for use in `load_forecasted_forcing_with_options`
             "fcst_cycle": forecast_cycle,
             "lead_time": lead_time,
@@ -542,9 +542,9 @@ def tryget_resume_session():
             "colMin": intra_module_db.get("colMin", 0),
             "colMax": intra_module_db.get("colMax", 0),
             "regionRowMin": intra_module_db.get("regionRowMin", 0),
-            "regionRowMax": intra_module_db.get("regionRowMax", 0),
+            "regionRowMax": intra_module_db.get("regionRowMax", 3840),
             "regionColMin": intra_module_db.get("regionColMin", 0),
-            "regionColMax": intra_module_db.get("regionColMax", 0),
+            "regionColMax": intra_module_db.get("regionColMax", 4608),
         }
         logger.info("Resuming session with data: %s", result_dict)
         result_dict["forecasted_forcing_data_dict"] = data_json
