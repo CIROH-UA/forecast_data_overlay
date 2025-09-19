@@ -187,6 +187,14 @@ function sendSelectedRegion() {
     send_object["regionRowMax"] = regionProperties.maximumRow;
     send_object["regionColMin"] = regionProperties.minimumCol;
     send_object["regionColMax"] = regionProperties.maximumCol;
+    local_cache["colMin"] = region.colMin;
+    local_cache["colMax"] = region.colMax;
+    local_cache["rowMin"] = region.rowMin;
+    local_cache["rowMax"] = region.rowMax;
+    local_cache["regionRowMin"] = regionProperties.minimumRow;
+    local_cache["regionRowMax"] = regionProperties.maximumRow;
+    local_cache["regionColMin"] = regionProperties.minimumCol;
+    local_cache["regionColMax"] = regionProperties.maximumCol;
     console.log("Sending selected region to server:", send_object);
     fetch('/set_region_bounds', {
         method: 'POST',
@@ -277,6 +285,10 @@ function externalSetRegionBounds(rowMin, rowMax, colMin, colMax, rowStep, colSte
     regionProperties.minimumCol = colMin;
     regionProperties.maximumCol = colMax;
     regionProperties.stepCol = colStep;
+    local_cache["regionRowMin"] = rowMin;
+    local_cache["regionRowMax"] = rowMax;
+    local_cache["regionColMin"] = colMin;
+    local_cache["regionColMax"] = colMax;
     // Update the targetRegionBounds to match the new slider values
     targetRegionBounds = getSelectedRegion();
     callSetRegion();

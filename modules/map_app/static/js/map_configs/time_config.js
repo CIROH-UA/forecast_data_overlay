@@ -18,11 +18,17 @@ document.getElementById('set-time').addEventListener('click', function () {
   const prevTime = document.getElementById('selected-time').textContent;
   const prevLeadTime = document.getElementById('selected-lead-time').textContent;
   const prevForecastCycle = document.getElementById('selected-forecast-cycle').textContent
-  var changed = false;
-  // Check if any of the values have changed
-  if (targetTime !== prevTime || leadTime !== prevLeadTime || forecastCycle !== prevForecastCycle) {
-    changed = true;
-  }
+  // var changed = false;
+  // // Check if any of the values have changed
+  // if (targetTime !== prevTime || leadTime !== prevLeadTime || forecastCycle !== prevForecastCycle) {
+  //   changed = true;
+  // }
+  var changed = true; 
+  console.log("Setting time to:", targetTime, leadTime, forecastCycle);
+  console.log("Previous time was:", prevTime, prevLeadTime, prevForecastCycle);
+  // If any of the values have changed, we proceed to set the time
+  // Just always treat as changed. 
+  // If they want to re-request the same time, that's fine.
   if (changed) {
     document.getElementById('selected-time').textContent = targetTime;
     document.getElementById('selected-lead-time').textContent = leadTime;
@@ -34,6 +40,11 @@ document.getElementById('set-time').addEventListener('click', function () {
     if (Tindex !== -1) {
       formattedTime = formattedTime.substring(0, Tindex);
     }
+
+    local_cache["target_time"] = formattedTime;
+    local_cache["lead_time"] = leadTime;
+    local_cache["forecast_cycle"] = forecastCycle;
+
 
 
     // Trigger the time change event

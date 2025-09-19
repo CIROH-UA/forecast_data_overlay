@@ -87,5 +87,32 @@ function setScaleLogic() {
     return result; // Return the promise chain for further handling if needed
 }
 
+
+
+function sendScaleValues(scaleX, scaleY) {
+  // Takes scaleX and scaleY as strings, sends them to the server
+  // Returns a promise that resolves to the response from the server
+  // This allows us to have logic based on the success or failure of the request
+  local_cache["scaleX"] = scaleX;
+  local_cache["scaleY"] = scaleY;
+  return fetch('/set_scales', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      scaleX: scaleX,
+      scaleY: scaleY
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    });
+}
+
+
 // set-scale button logic
 document.getElementById('set-scale').addEventListener('click', setScaleLogic);

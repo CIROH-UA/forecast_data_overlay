@@ -245,32 +245,65 @@ function updateForecastedPrecipOverlay() {
   // This function returns a promise that resolves to true if the overlay was updated successfully
   // If the data is not available, it will log an error and return false
   // This allows us to have logic based on the success or failure of the request
-  return fetch('/get_forecast_precip', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (typeof data === 'string') {
-        data = JSON.parse(data); // Ensure data is parsed correctly
-      }
-      console.log('Forecasted precipitation data received:', data);
+  // return fetch('/get_forecast_precip', {
+  //   method: 'POST',
+  //   headers: {
+  //     'Content-Type': 'application/json'
+  //   }
+  // })
+  //   .then(response => {
+  //     if (!response.ok) {
+  //       throw new Error('Network response was not ok');
+  //     }
+  //     return response.json();
+  //   })
+  //   .then(data => {
+  //     if (typeof data === 'string') {
+  //       data = JSON.parse(data); // Ensure data is parsed correctly
+  //     }
+  //     console.log('Forecasted precipitation data received:', data);
+  //     // Update the map overlay with the received data
+  //     updateForecastLayer(data);
+  //     // We were successful, return true
+  //     console.log('Forecasted precipitation overlay updated successfully.');
+  //     return true;
+  //   })
+  //   .catch(error => {
+  //     console.error('Error fetching forecasted precipitation data:', error);
+  //   });
+  const targetTime = local_cache["target_time"];
+  const leadTime = local_cache["lead_time"];
+  const forecastCycle = local_cache["forecast_cycle"];
+  const scaleX = local_cache["scaleX"];
+  const scaleY = local_cache["scaleY"];
+  const rowMin = local_cache["rowMin"];
+  const rowMax = local_cache["rowMax"];
+  const colMin = local_cache["colMin"];
+  const colMax = local_cache["colMax"];
+  return requestForecastedPrecip(
+    targetTime,
+    leadTime,
+    forecastCycle,
+    scaleX,
+    scaleY,
+    rowMin,
+    rowMax,
+    colMin,
+    colMax
+  ).then(data => {
+    if (data) {
       // Update the map overlay with the received data
       updateForecastLayer(data);
       // We were successful, return true
       console.log('Forecasted precipitation overlay updated successfully.');
       return true;
-    })
-    .catch(error => {
-      console.error('Error fetching forecasted precipitation data:', error);
-    });
+    } else {
+      console.warn('No data received for forecasted precipitation.');
+      return false;
+    }
+  }).catch(error => {
+    console.error('Error fetching forecasted precipitation data:', error);
+  });
 }
 
 // Set up geometry popups for RAINRATE values
@@ -287,26 +320,3 @@ map.on("click", "forecasted_precip_layer", (e) => {
     .addTo(map);
   console.log('Clicked on forecasted precipitation layer at', coordinates, 'with value', value);
 });
-
-
-function sendScaleValues(scaleX, scaleY) {
-  // Takes scaleX and scaleY as strings, sends them to the server
-  // Returns a promise that resolves to the response from the server
-  // This allows us to have logic based on the success or failure of the request
-  return fetch('/set_scales', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      scaleX: scaleX,
-      scaleY: scaleY
-    })
-  })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    });
-}
