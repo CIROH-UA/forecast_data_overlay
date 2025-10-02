@@ -1,5 +1,44 @@
+/**
+ * @file Functionality for the region selection configuration interface.
+ * @author chp2001 <https://github.com/chp2001>
+ */
+
+/** @const {Boolean} Whether to enable debug logging. Set to true to enable debug logs, false to disable.*/
+const region_config_debug = false;
+
+/**
+ * Logs messages to the console if region_config_debug is true.
+ * Intended only for use within this file.
+ * @param  {...any} args - The messages or objects to log to the console.
+ */
+function r_c_d_log(...args) {
+    if (region_config_debug) {
+        console.log("[region_config]", ...args);
+    }
+}
+
+/**
+ * @typedef {Object} MinMaxConfig
+ * @property {HTMLInputElement} minSlider - The minimum value slider element
+ * @property {HTMLSpanElement} minSliderCurrentValue - The span displaying the current selected minimum value
+ * @property {HTMLSpanElement} minSliderSetValue - The span displaying the set minimum value
+ * @property {Function} minValueSelector - Function to select a minimum value with bounds checking
+ * @property {Function} minValueSetter - Function to set the current selected minimum value as the set value
+ * @property {Function} minValueSetterExternal - Function to externally set the minimum value (e.g., when resuming a session)
+ * @property {HTMLInputElement} maxSlider - The maximum value slider element
+ * @property {HTMLSpanElement} maxSliderCurrentValue - The span displaying the current selected maximum value
+ * @property {HTMLSpanElement} maxSliderSetValue - The span displaying the set maximum value
+ * @property {Function} maxValueSelector - Function to select a maximum value with bounds checking
+ * @property {Function} maxValueSetter - Function to set the current selected maximum value as the set value
+ * @property {Function} maxValueSetterExternal - Function to externally set the maximum value (e.g., when resuming a session)
+ */
 
 // Set up the #region-col-selection and #region-row-selection interface elements
+/**
+ * Sets up the min and max sliders for either rows or columns
+ * @param {string} parentDivId - The ID of the parent div where the sliders will be added
+ * @returns {MinMaxConfig} An object containing references to the created elements and functions to manipulate them
+ */
 function setupMinMaxSliders(parentDivId) {
     // Create the min and max sliders and their labels
     // then return the created elements
@@ -195,8 +234,8 @@ function sendSelectedRegion() {
     local_cache["regionRowMax"] = regionProperties.maximumRow;
     local_cache["regionColMin"] = regionProperties.minimumCol;
     local_cache["regionColMax"] = regionProperties.maximumCol;
-    // console.log("Sending selected region to server:", send_object);
-    console.log("Saved selected region to local cache:", local_cache);
+    // r_c_d_log("Sending selected region to server:", send_object);
+    r_c_d_log("Saved selected region to local cache:", local_cache);
     // fetch('/set_region_bounds', {
     //     method: 'POST',
     //     headers: { 'Content-Type': 'application/json' },
@@ -204,8 +243,8 @@ function sendSelectedRegion() {
     // })
     //     .then(response => response.json())
     //     .then(data => {
-    //         console.log('Region bounds sent to server:', region);
-    //         console.log('Server response:', data);
+    //         r_c_d_log('Region bounds sent to server:', region);
+    //         r_c_d_log('Server response:', data);
     //     })
     //     .catch(error => {
     //         console.error('Error sending region bounds to server:', error);
@@ -227,7 +266,7 @@ function setSliderProperties(sliderElements, min, max, step) {
     const currentMax = sliderElements.maxSliderSetValue.innerText;
     // Adjust existing values to be within new min/max and aligned to step
     if (currentMin != "") {
-        console.log("Current min value:", currentMin);
+        r_c_d_log("Current min value:", currentMin);
         let currentMinValue = parseInt(currentMin);
         if (currentMinValue < min) {
             sliderElements.minSlider.value = min;
@@ -238,11 +277,11 @@ function setSliderProperties(sliderElements, min, max, step) {
             sliderElements.minSlider.value = roundedMin;
         }
     } else {
-        console.log("No current min value, setting to min:", min);
+        r_c_d_log("No current min value, setting to min:", min);
         sliderElements.minSlider.value = min;
     }
     if (currentMax != "") {
-        console.log("Current max value:", currentMax);
+        r_c_d_log("Current max value:", currentMax);
         let currentMaxValue = parseInt(currentMax);
         if (currentMaxValue < min) {
             sliderElements.maxSlider.value = min;
@@ -253,7 +292,7 @@ function setSliderProperties(sliderElements, min, max, step) {
             sliderElements.maxSlider.value = roundedMax;
         }
     } else {
-        console.log("No current max value, setting to max:", max);
+        r_c_d_log("No current max value, setting to max:", max);
         sliderElements.maxSlider.value = max;
     }
 
@@ -276,7 +315,7 @@ function externalSetRegionBounds(rowMin, rowMax, colMin, colMax, rowStep, colSte
     // Force steps to be 16 always
     // rowStep = 16;
     // colStep = 16;
-    console.log("Externally setting region sliders to:", { rowMin, rowMax, colMin, colMax, rowStep, colStep });
+    r_c_d_log("Externally setting region sliders to:", { rowMin, rowMax, colMin, colMax, rowStep, colStep });
     setSliderProperties(rowElements, rowMin, rowMax, rowStep);
     setSliderProperties(colElements, colMin, colMax, colStep);
     // Update the regionProperties object
@@ -293,18 +332,18 @@ function externalSetRegionBounds(rowMin, rowMax, colMin, colMax, rowStep, colSte
     // Update the targetRegionBounds to match the new slider values
     targetRegionBounds = getSelectedRegion();
     callSetRegion();
-    console.log("Region sliders externally set. Target region bounds now:", targetRegionBounds);
+    r_c_d_log("Region sliders externally set. Target region bounds now:", targetRegionBounds);
 }
 
 function externalSetRegionValues(rowMin, rowMax, colMin, colMax) {
-    console.log("Externally setting region slider values to:", { rowMin, rowMax, colMin, colMax });
+    r_c_d_log("Externally setting region slider values to:", { rowMin, rowMax, colMin, colMax });
     // Adjust the values and setValues to the provided values
     rowElements.minValueSetterExternal(rowMin);
     rowElements.maxValueSetterExternal(rowMax);
     colElements.minValueSetterExternal(colMin);
     colElements.maxValueSetterExternal(colMax);
     targetRegionBounds = getSelectedRegion();
-    console.log("Region slider values externally set. Target region bounds now:", targetRegionBounds);
+    r_c_d_log("Region slider values externally set. Target region bounds now:", targetRegionBounds);
 }
 
 
@@ -315,7 +354,7 @@ document.getElementById("set-region").addEventListener("click", () => {
     targetRegionBounds = getSelectedRegion();
     callSetRegion();
     sendSelectedRegion();
-    console.log("Target region bounds set to:", targetRegionBounds);
+    r_c_d_log("Target region bounds set to:", targetRegionBounds);
 });
 
 externalSetRegionBounds(

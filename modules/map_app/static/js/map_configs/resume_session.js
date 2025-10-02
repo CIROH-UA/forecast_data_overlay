@@ -20,11 +20,20 @@ function updateWithResumedSession(data) {
         document.getElementById('selected-forecast-cycle').textContent = data.forecast_cycle;
         document.getElementById('forecast-cycle').value = data.forecast_cycle;
     }
-    if (data.scaleX) {
-        document.getElementById('set-scale-x-value').textContent = data.scaleX;
-    }
-    if (data.scaleY) {
-        document.getElementById('set-scale-y-value').textContent = data.scaleY;
+    // if (data.scaleX) {
+    //     document.getElementById('set-scale-x-value').textContent = data.scaleX;
+    // }
+    // if (data.scaleY) {
+    //     document.getElementById('set-scale-y-value').textContent = data.scaleY;
+    // }
+    if (data.scaleX || data.scaleY) {
+        // Rather than update individual elements, we can use the scaleConfigElement's setFull method
+        // to update both values at once, preserving any unchanged values.
+        // This also ensures the sliders and labels are all updated consistently.
+        scaleConfigElement.setFull({
+            xScale: data.scaleX || null,
+            yScale: data.scaleY || null
+        });
     }
     if (data.rowMin && data.rowMax && data.colMin && data.colMax) {
         externalSetRegionBounds(

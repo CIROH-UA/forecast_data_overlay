@@ -22,7 +22,10 @@
     {% for filename in components_filenames %}
     <script src="{{ url_for('static', filename='js/components/' + filename) }}"></script>
     {% endfor %}
-    <test-element></test-element>
+
+    <!-- <double-labeled-slider label="test-slider" id="test-slider"></double-labeled-slider> -->
+    <!-- <script src="{{ url_for('static', filename='js/map_configs/scale_config_2.js' ) }}"></script> -->
+    <!-- <scale-config></scale-config> -->
     <!-- <header>
         <h1>Select catchments by clicking!</h1>
     </header> -->
@@ -39,35 +42,7 @@
                         <button id="toggle-button-aorc">Overlay AORC chunks</button>
                         <button id="toggle-button-forecast">Show Forecast Data</button>
                     </div>
-                    <section id="scale-settings">
-                        <!-- 
-                        Controls for modifying the granularity of the displayed data
-                        E.g., by default the grid is coarsened such that groups of 16x16 cells are summed together
-                        This section allows the user to modify that coarsening factor
-                        xarray allows coarsening by x and y separately, so we can allow both to be modified
-                        -->
-                        <label for="scale-settings">Data Scale Settings:</label>
-                        <div class="scale-axis-lock-toggle">
-                            <input type="checkbox" id="scale-axis-lock" name="scale-axis-lock" checked>
-                            <label for="scale-axis-lock">Lock X and Y axis scaling</label>
-                        </div>
-                        <div class="scale-x-input">
-                            <label for="scale-x">X Scale (size of summed blocks in x direction):</label>
-                            <input type="range" id="scale-x" name="scale-x" value="16" min="1" max="64" step="1">
-                            <span id="scale-x-value">16</span>
-                            <!-- Currently set value: -->
-                            <span id="set-scale-x-value">16</span>
-                        </div>
-                        <div class="scale-y-input">
-                            <label for="scale-y">Y Scale (size of summed blocks in y direction):</label>
-                            <input type="range" id="scale-y" name="scale-y" value="16" min="1" max="64" step="1">
-                            <span id="scale-y-value">16</span>
-                            <!-- Currently set value: -->
-                            <span id="set-scale-y-value">16</span>
-                        </div>
-                        <!-- Button to apply the selected scale settings. Will update the displayed values, and re-request data with the new scale -->
-                        <button id="set-scale">Set Scale</button>
-                    </section>
+                    <scale-config id="scale-config"></scale-config>
                     <div id="region-selection">
                         <label for="region-selection">Region Selection:</label>
                         <!-- Use sliders to select specific region of map for data access -->
