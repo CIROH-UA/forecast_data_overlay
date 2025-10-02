@@ -384,6 +384,7 @@ class double_labeled_slider extends HTMLElement {
         this.containerElement = document.createElement('div');
         this.containerElement.style.display = 'flex';
         this.containerElement.style.alignItems = 'center';
+        this.containerElement.style.gap = '10px';
         this.containerElement.appendChild(title);
         this.containerElement.appendChild(this.sliderElement);
         this.containerElement.appendChild(this.setLabelElement);

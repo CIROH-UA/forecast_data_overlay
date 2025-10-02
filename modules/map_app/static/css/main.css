@@ -139,7 +139,7 @@ button:hover {
   background-color: var(--primary-hover);
 }
 
-#time-settings, #scale-settings {
+#time-settings, #scale-settings, #region-settings {
   background: var(--surface-color);
   padding: 20px;
   border-radius: var(--border-radius);

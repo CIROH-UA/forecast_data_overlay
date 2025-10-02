@@ -1,42 +1,3 @@
-// File: modules/map_app/static/js/map_configs/scale_config_2.js
-
-// Intended to replace the functionality of map_configs/scale_config.js
-
-// Original code is paired with this section of HTML in the index.html file:
-/*
-<section id="scale-settings">
-    <!-- 
-    Controls for modifying the granularity of the displayed data
-    E.g., by default the grid is coarsened such that groups of 16x16 cells are summed together
-    This section allows the user to modify that coarsening factor
-    xarray allows coarsening by x and y separately, so we can allow both to be modified
-    -->
-    <label for="scale-settings">Data Scale Settings:</label>
-    <div class="scale-axis-lock-toggle">
-        <input type="checkbox" id="scale-axis-lock" name="scale-axis-lock" checked>
-        <label for="scale-axis-lock">Lock X and Y axis scaling</label>
-    </div>
-    <div class="scale-x-input">
-        <label for="scale-x">X Scale (size of summed blocks in x direction):</label>
-        <input type="range" id="scale-x" name="scale-x" value="16" min="1" max="64" step="1">
-        <span id="scale-x-value">16</span>
-        <!-- Currently set value: -->
-        <span id="set-scale-x-value">16</span>
-    </div>
-    <div class="scale-y-input">
-        <label for="scale-y">Y Scale (size of summed blocks in y direction):</label>
-        <input type="range" id="scale-y" name="scale-y" value="16" min="1" max="64" step="1">
-        <span id="scale-y-value">16</span>
-        <!-- Currently set value: -->
-        <span id="set-scale-y-value">16</span>
-    </div>
-    <!-- Button to apply the selected scale settings. Will update the displayed values, and re-request data with the new scale -->
-    <button id="set-scale">Set Scale</button>
-</section>
-*/
-
-// Rewriting the above code and HTML section using custom elements
-
 // Primary custom element for use is the double-labeled-slider custom element from components/double_labeled_slider.js
 
 // The key points of the above code to replicate are:
@@ -44,6 +5,19 @@
 // 2. Each slider has a label, a current value display, and a set value display
 // 3. There is a checkbox to lock the two sliders together
 // 4. There is a button to apply the selected scale settings
+
+/**
+ * @callback scaleSetCallback
+ * @param {Object} options - The new values
+ * @param {number?} options.xScale - The new x scale value. Null if unchanged
+ * @param {number?} options.yScale - The new y scale value. Null if unchanged
+ */
+/**
+ * @callback scaleSelectionCallback
+ * @param {Object} options - The new selection values
+ * @param {number?} options.xScale - The new x scale selection value. Null if unchanged
+ * @param {number?} options.yScale - The new y scale selection value. Null if unchanged
+ */
 
 class scale_config extends HTMLElement {
     constructor() {
@@ -61,18 +35,7 @@ class scale_config extends HTMLElement {
 
         this.mostRecentlySetScale = null; // one of [null, 'x', 'y']
 
-        /**
-         * @callback scaleSetCallback
-         * @param {Object} options - The new values
-         * @param {number?} options.xScale - The new x scale value. Null if unchanged
-         * @param {number?} options.yScale - The new y scale value. Null if unchanged
-         */
-        /**
-         * @callback scaleSelectionCallback
-         * @param {Object} options - The new selection values
-         * @param {number?} options.xScale - The new x scale selection value. Null if unchanged
-         * @param {number?} options.yScale - The new y scale selection value. Null if unchanged
-         */
+        
 
         /**
          * Functions to call when the scale is set
