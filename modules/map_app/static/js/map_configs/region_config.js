@@ -77,6 +77,12 @@ function callSetRegion() {
         callback();
     });
 }
+var selectRegionCallbacks = [];
+function callSelectRegion(rowMin, rowMax, colMin, colMax) {
+    selectRegionCallbacks.forEach((callback) => {
+        callback(rowMin, rowMax, colMin, colMax);
+    });
+}
 // Translating the externalSetRegionBounds function
 function externalSetRegionBounds(rowMin, rowMax, colMin, colMax, rowStep, colStep) {
     regionSelectorElement.setSliderBounds({
@@ -118,7 +124,13 @@ regionSelectorElement.addOnRegionSelectionFunction(
     'region-config-selection-update', 
     ({rowMin = null, rowMax = null, colMin = null, colMax = null}={}) =>
     {
-        // Pass?
+        // Send the selected region to the callbacks
+        callSelectRegion(
+            regionSelectorElement.rowMinSelectionValue,
+            regionSelectorElement.rowMaxSelectionValue,
+            regionSelectorElement.colMinSelectionValue,
+            regionSelectorElement.colMaxSelectionValue
+        )
     }
 );
 // Callbacks for when the values are locked in

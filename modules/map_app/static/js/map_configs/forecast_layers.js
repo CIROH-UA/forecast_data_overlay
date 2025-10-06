@@ -19,6 +19,27 @@ map.on("load", () => {
         }
     });
 
+    // Layer to show candidate region for selection. Won't be locked in until user confirms
+    map.addSource("forecasting_gridlines_candidate_region", {
+        type: "geojson",
+        data: {
+            type: "FeatureCollection",
+            features: []
+        }
+    });
+
+    map.addLayer({
+        id: "forecasting_gridlines_candidate_region_layer",
+        type: "line",
+        source: "forecasting_gridlines_candidate_region",
+        paint: {
+            "line-color": ["get", "color"],
+            "line-width": 2,
+            "line-opacity": 0.5
+        }
+    });
+
+    // Layer to show the region that will limit the next requested data
     map.addSource("forecasting_gridlines_region", {
         type: "geojson",
         data: {
@@ -157,6 +178,40 @@ function highlightRegionBounds(rowMin, rowMax, colMin, colMax) {
     });
     console.log('Region bounds highlighted:', { rowMin, rowMax, colMin, colMax });
 }
+function highlightCandidateRegionBounds(rowMin, rowMax, colMin, colMax) {
+    // Selects the edge gridlines to highlight the candidate selected region
+    // rowMin, rowMax, colMin, colMax are integers
+    const features = map.getSource("forecasting_gridlines")._data.features;
+    var regionFeatures = [];
+    // violet for candidate region
+    const candidateColor = "rgba(127, 0, 255, 1)";
+    for (let feature of features) {
+        if (feature.id.startsWith("horiz-")) {
+            // Horizontal line, check if its index is rowMin or rowMax
+            const index = parseInt(feature.id.split("-")[1]);
+            if (index === rowMin || index === rowMax - 1) {
+                modifiedFeature = JSON.parse(JSON.stringify(feature));
+                modifiedFeature.properties.color = candidateColor; // Highlight color
+                regionFeatures.push(modifiedFeature);
+            }
+        }
+        else if (feature.id.startsWith("vert-")) {
+            // Vertical line, check if its index is colMin or colMax
+            const index = parseInt(feature.id.split("-")[1]);
+            if (index === colMin || index === colMax - 1) {
+                modifiedFeature = JSON.parse(JSON.stringify(feature));
+                modifiedFeature.properties.color = candidateColor; // Highlight color
+                regionFeatures.push(modifiedFeature);
+            }
+        }
+    }
+    // Update the source data
+    map.getSource("forecasting_gridlines_candidate_region").setData({
+        type: "FeatureCollection",
+        features: regionFeatures
+    });
+    console.log('Candidate region bounds highlighted:', { rowMin, rowMax, colMin, colMax });
+}
 show_gridlines = true;
 if (show_gridlines) {
     map.on("load", updateForecastingGridlines); // Load gridlines on map load
@@ -166,6 +221,14 @@ if (show_gridlines) {
             targetRegionBounds.rowMax / regionProperties.stepRow,
             targetRegionBounds.colMin / regionProperties.stepCol,
             targetRegionBounds.colMax / regionProperties.stepCol
+        );
+    });
+    selectRegionCallbacks.push((rowMin, rowMax, colMin, colMax) => {
+        highlightCandidateRegionBounds(
+            rowMin / regionProperties.stepRow,
+            rowMax / regionProperties.stepRow,
+            colMin / regionProperties.stepCol,
+            colMax / regionProperties.stepCol
         );
     });
 }
