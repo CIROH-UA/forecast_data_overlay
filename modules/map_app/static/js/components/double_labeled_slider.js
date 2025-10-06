@@ -50,12 +50,12 @@ class double_labeled_slider extends HTMLElement {
         console.log('Double labeled slider ' + this.uuid + ' loaded successfully. Building...');
         
 
-        this.min = this.getAttribute('min') || 0;
-        this.max = this.getAttribute('max') || 100;
-        this.step = this.getAttribute('step') || 1;
+        this.min =  parseInt(this.getAttribute('min') || 0);
+        this.max =  parseInt(this.getAttribute('max') || 100);
+        this.step =  parseInt(this.getAttribute('step') || 1);
         this.label = this.getAttribute('label') || '';
         this.width = this.getAttribute('width') || '300px';
-        this.value = this.getAttribute('value') || this.min;
+        this.value =  parseInt(this.getAttribute('value') || this.min);
         
         this.includeSetButton = (this.getAttribute('include-set-button') === 'true');
 
@@ -100,7 +100,7 @@ class double_labeled_slider extends HTMLElement {
      * @private
      */
     onSliderChange(event) {
-        this.selectValue(event.target.value);
+        this.selectValue(parseInt(event.target.value));
         this.triggerOnChange(this.selectionValue);
     }
 
