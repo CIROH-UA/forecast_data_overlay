@@ -108,6 +108,8 @@ The majority of the related work can be skipped by both reusing the `double_labe
 
 Since the previous version was essentially a modular pseudo-class implementation, much of the existing code can be reused with minor modifications.
 
+This is now complete.
+
 ### Candidate Region Bound Display
 
 The current implementation already displays the selected region on the map as a rectangle, but this is only updated when the "Set Region" button is clicked. This is workable, but to see what effect an adjustment to one of the sliders will have, the user has to 'lock in' the new values by clicking the button. This is very clunky, and can significantly slow down the process of finding a desired region.
@@ -115,6 +117,8 @@ The current implementation already displays the selected region on the map as a 
 To improve this, we can add a secondary rectangle to the map that displays the currently selected region based on the `selectionValue` values of the sliders, rather than the `setValue` values. This rectangle would update in real-time as the sliders are moved, providing immediate visual feedback on the selected region.
 
 This is a relatively simple addition, likely requiring only a few lines of code and some callbacks, but will be easiest to implement after the custom component refactor of the region selection section is complete.
+
+This is now complete.
 
 ### Refactoring Time Settings
 

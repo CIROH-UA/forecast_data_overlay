@@ -184,7 +184,7 @@ function highlightCandidateRegionBounds(rowMin, rowMax, colMin, colMax) {
     const features = map.getSource("forecasting_gridlines")._data.features;
     var regionFeatures = [];
     // violet for candidate region
-    const candidateColor = "rgba(127, 0, 255, 1)";
+    const candidateColor = "rgba(255, 0, 255, 1)";
     for (let feature of features) {
         if (feature.id.startsWith("horiz-")) {
             // Horizontal line, check if its index is rowMin or rowMax
