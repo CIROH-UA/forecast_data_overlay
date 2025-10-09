@@ -27,6 +27,7 @@
     <!-- <script src="{{ url_for('static', filename='js/map_configs/scale_config_2.js' ) }}"></script> -->
     <!-- <scale-config></scale-config> -->
     <!-- <region-selector id="region-selector"></region-selector> -->
+    <time-config id="time-config"></time-config>
     <!-- <header>
         <h1>Select catchments by clicking!</h1>
     </header> -->
@@ -55,8 +56,11 @@
                         <label for="time-settings">Time Settings:</label>
                         <div class="time-input" style="display: flex; flex-direction: column; margin-bottom: 10px;">
                             <label for="target-time">Target Time:</label>
-                            <input type="datetime-local" id="target-time" name="target-time" value="2018-09-17T00:00"
-                                min="2018-09-17T00:00">
+                            <!-- <input type="datetime-local" id="target-time" name="target-time" value="2018-09-17T00:00"
+                                min="2018-09-17T00:00"> -->
+                            <!-- max date is today's date to be safe... can handle on JS end -->
+                            <input type="date" id="target-time" name="target-time" value="2025-07-04"
+                                min="2018-09-17">
                         </div>
                         <div class="lead-time-input">
                             <label for="lead-time">Lead Time (hours):</label>

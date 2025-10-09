@@ -128,3 +128,6 @@ Most of the functionality will remain in the `map_configs/time_config.js` file, 
 
 At this time, the `time_settings_element.js` component will likely be less critical and have less functionality than the other two custom components, as the time settings section is relatively simple. However, it will still simplify the HTML structure and provide a convenient stepping stone for later features that may rely on either multiple time settings sections, or more complex time selection functionality.
 
+Custom element may not actually be necessary, as the section is relatively simple, and shouldn't need duplication. Can likely continue the current management method with additional functionality.
+
+Decided custom element is still worthwhile for consistency and future-proofing. Currently in progress.

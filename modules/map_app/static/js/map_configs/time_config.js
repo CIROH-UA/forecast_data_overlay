@@ -18,11 +18,6 @@ document.getElementById('set-time').addEventListener('click', function () {
     const prevTime = document.getElementById('selected-time').textContent;
     const prevLeadTime = document.getElementById('selected-lead-time').textContent;
     const prevForecastCycle = document.getElementById('selected-forecast-cycle').textContent
-    // var changed = false;
-    // // Check if any of the values have changed
-    // if (targetTime !== prevTime || leadTime !== prevLeadTime || forecastCycle !== prevForecastCycle) {
-    //   changed = true;
-    // }
     var changed = true;
     console.log("Setting time to:", targetTime, leadTime, forecastCycle);
     console.log("Previous time was:", prevTime, prevLeadTime, prevForecastCycle);
@@ -45,36 +40,6 @@ document.getElementById('set-time').addEventListener('click', function () {
         local_cache["lead_time"] = leadTime;
         local_cache["forecast_cycle"] = forecastCycle;
 
-
-
-        // // Trigger the time change event
-        // fetch('/set_time', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify({
-        //         target_time: formattedTime,
-        //         lead_time: leadTime,
-        //         forecast_cycle: forecastCycle
-        //     })
-        // })
-        //     .then(response => {
-        //         if (!response.ok) {
-        //             throw new Error('Network response was not ok');
-        //         }
-        //         return response.json();
-        //     })
-        //     .then(data => {
-        //         console.log('Time set successfully:', data);
-        //     })
-        //     .then(() => {
-        //         // Fetch and update the forecasted precipitation data
-        //         updateForecastedPrecipOverlay();
-        //     })
-        //     .catch(error => {
-        //         console.error('Error setting time:', error);
-        //     });
         updateForecastedPrecipOverlay();
     }
 });
