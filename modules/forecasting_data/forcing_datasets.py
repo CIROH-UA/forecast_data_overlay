@@ -234,6 +234,8 @@ def get_example_forcing_dataset() -> xr.Dataset:
     except FileNotFoundError:
         print("No example dataset found, loading a new one.")
         dataset = load_forecasted_forcing(date="202301010000", fcst_cycle=0, lead_time=1)
+        if not os.path.exists("./dist/"):
+            os.makedirs("./dist/")
         with open("./dist/example_dataset.pkl", "wb") as f:
             pickle.dump(dataset, f)
         print("Cached example dataset to ./dist/example_dataset.pkl")
