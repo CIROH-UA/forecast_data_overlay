@@ -13,9 +13,12 @@
 protocol = new pmtiles.Protocol({ metadata: true });
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
+
 // select light-style if the browser is in light mode
 // select dark-style if the browser is in dark mode
 var style = 'https://communityhydrofabric.s3.us-east-1.amazonaws.com/map/styles/light-style.json';
+// (style is only used in after_map.js to initialize the map after this section)
+// (nwm_paint and aorc_paint are used once each in map_configs/basic_layers.js)
 var colorScheme = "light";
 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     style = 'https://communityhydrofabric.s3.us-east-1.amazonaws.com/map/styles/dark-style.json';
@@ -55,31 +58,6 @@ const popup = new maplibregl.Popup({
 });
 
 
-var local_cache = {
-    colMin: null,
-    colMax: null,
-    rowMin: null,
-    rowMax: null,
-    regionRowMin: null,
-    regionRowMax: null,
-    regionColMin: null,
-    regionColMax: null,
-    scaleX: 16,
-    scaleY: 16,
-    target_time: null,
-    lead_time: null,
-    forecast_cycle: null,
-    lead_time_end: null,
-    range_mode: null
-};
-
-/**
- * @type {{geometry: Array, timestep_values: Object.<number, Array>}}
- */
-var data_cache = {
-    geometry: [],
-    timestep_values: {},
-}
 
 /**
  * Generalized function to request forecasted precipitation data from the server.
