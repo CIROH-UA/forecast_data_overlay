@@ -529,7 +529,7 @@ def download_forecast_precip():
         file_path = download_dir / f"{output_name}.nc"
         save_forecasted_dataset_with_options(
             file_path=file_path,
-            selected_time=selected_time,
+            date=selected_time,
             forecast_cycle=forecast_cycle,
             lead_time=lead_time,
             scaleX=scaleX,
@@ -552,7 +552,7 @@ def download_forecast_precip():
             file_path = download_dir / f"{output_name}.nc"
             save_forecasted_dataset_with_options(
                 file_path=file_path,
-                selected_time=selected_time,
+                date=selected_time,
                 forecast_cycle=forecast_cycle,
                 lead_time=lt,
                 scaleX=scaleX,

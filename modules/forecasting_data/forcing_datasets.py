@@ -826,7 +826,7 @@ def _get_timestep_values_for_frontend(
 
 def get_timesteps_data_for_frontend(
     selected_time: str,  # YYYYMMDD
-    fcst_cycle: int,
+    forecast_cycle: int,
     # lead_times: List[int],
     lead_times: Tuple[int, ...],
     scaleX: Optional[int] = None,
@@ -851,7 +851,7 @@ def get_timesteps_data_for_frontend(
     # Wrapper for the cached version to allow for ignored arguments
     return _get_timesteps_data_for_frontend(
         selected_time,
-        fcst_cycle,
+        forecast_cycle,
         lead_times,
         scaleX,
         scaleY,

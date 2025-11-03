@@ -85,4 +85,32 @@ if (use_old_time_config) {
             updateForecastedPrecipOverlay();
         }
     );
+    timeConfigElement.addOnDownloadFunction(
+        'forecasted-precip-download',
+        ({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null}={}) => {
+            // Received target_time is YYYY-MM-DD, convert it to YYYYMMDD
+            var formattedTime = target_time.replace(/-/g, '');
+            console.log('Download requested for forecasted precip with settings:', {
+                target_time: formattedTime,
+                lead_time,
+                forecast_cycle,
+                range_mode,
+                lead_time_end
+            });
+            // Initiate download
+            downloadNetcdfData(
+                formattedTime,
+                lead_time,
+                forecast_cycle,
+                local_cache["scaleX"],
+                local_cache["scaleY"],
+                local_cache["rowMin"],
+                local_cache["rowMax"],
+                local_cache["colMin"],
+                local_cache["colMax"],
+                lead_time_end,
+                range_mode
+            );
+        }
+    );
 }

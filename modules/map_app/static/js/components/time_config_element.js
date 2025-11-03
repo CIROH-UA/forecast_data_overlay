@@ -81,6 +81,8 @@ var time_config_config = {
     // const submit_button_string = 'Set Time';
     submit_button_string: 'Get Data',
     submit_button_id: 'submit-time-config',
+    download_button_string: 'Download Selected',
+    download_button_id: 'download-forecast-data',
 }
 
 /**
@@ -126,6 +128,11 @@ class time_config extends HTMLElement {
          * Functions to call when something updates the selection display.
          */
         this.onDisplaySelectFuncs = {};
+        /**
+         * @type {Object.<string, onSubmitCallback>}
+         * Functions to call when the download button is pressed.
+         */
+        this.onDownloadFuncs = {};
 
         // Data attributes
         this.target_time = time_config_config.target_time_default_date; // expected to be '2025-07-04'
@@ -182,6 +189,7 @@ class time_config extends HTMLElement {
         // button to submit the selected values and request data
         // this.setTimeButton = null;
         this.submitButton = null;
+        this.downloadButton = null;
         // container element for the entire component
         this.containerElement = null;
 
@@ -264,6 +272,43 @@ class time_config extends HTMLElement {
     triggerOnDisplaySelect(args) {
         for (const key in this.onDisplaySelectFuncs) {
             this.onDisplaySelectFuncs[key](args);
+        }
+    }
+
+    // onDownload function helpers
+
+    /**
+     * Add a function to be called when the download button is pressed.
+     * @param {string} key - The unique key to identify the function.
+     * @param {onSubmitCallback} func - The function to call on download.
+     */
+    addOnDownloadFunction(key, func) {
+        if (this.onDownloadFuncs[key]) {
+            console.error('Function with key ' + key + ' already exists. Use a unique key.');
+            return;
+        }
+        this.onDownloadFuncs[key] = func;
+    }
+
+    /**
+     * Remove a previously added onDownload function.
+     * @param {string} key - The unique key identifying the function to remove.
+     */
+    removeOnDownloadFunction(key) {
+        if (!this.onDownloadFuncs[key]) {
+            console.error('Function with key ' + key + ' does not exist.');
+            return;
+        }
+        delete this.onDownloadFuncs[key];
+    }
+
+    /**
+     * Call all registered onDownload functions with the provided arguments.
+     * @param {timeConfigArgs} args - The arguments to pass to the onDownload functions.
+     */
+    triggerOnDownload(args) {
+        for (const key in this.onDownloadFuncs) {
+            this.onDownloadFuncs[key](args);
         }
     }
 
@@ -667,12 +712,20 @@ class time_config extends HTMLElement {
         this.submitButton = document.createElement('button');
         this.submitButton.id = time_config_config.submit_button_id;
         this.submitButton.textContent = time_config_config.submit_button_string;
+
+        // Include the downoad button here as well in the same flex container
+        
+        this.downloadButton = document.createElement('button');
+        this.downloadButton.id = time_config_config.download_button_id;
+        this.downloadButton.textContent = time_config_config.download_button_string;
+        this.downloadButton.style.marginLeft = '10px';
         
         const submitButtonContainer = document.createElement('div');
         submitButtonContainer.style.display = 'flex';
         submitButtonContainer.style.justifyContent = 'center';
         submitButtonContainer.style.marginTop = '10px';
         submitButtonContainer.appendChild(this.submitButton);
+        submitButtonContainer.appendChild(this.downloadButton);
 
         return submitButtonContainer;
     }
@@ -815,6 +868,22 @@ class time_config extends HTMLElement {
     }
 
     /**
+     * Configure the download button events
+     */
+    configureDownloadButton() {
+        this.downloadButton.addEventListener('click', () => {
+            // On download button click, trigger any registered onDownload functions
+            this.triggerOnDownload({
+                target_time: this.selected_target_time,
+                lead_time: this.selected_lead_time,
+                lead_time_end: this.selected_lead_time_end,
+                forecast_cycle: this.selected_forecast_cycle,
+                range_mode: this.selected_range_mode
+            });
+        });
+    }
+
+    /**
      * Build the entire component structure and append it to the custom element
      */
     build() {
@@ -853,6 +922,7 @@ class time_config extends HTMLElement {
         this.configureForecastCycleInput();
         this.configureTargetTimeInput();
         this.configureSubmitButton();
+        this.configureDownloadButton();
 
         this.containerElement.appendChild(this.titleElement);
         this.containerElement.appendChild(targetTimeContainer);
