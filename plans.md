@@ -130,4 +130,24 @@ At this time, the `time_settings_element.js` component will likely be less criti
 
 Custom element may not actually be necessary, as the section is relatively simple, and shouldn't need duplication. Can likely continue the current management method with additional functionality.
 
-Decided custom element is still worthwhile for consistency and future-proofing. Currently in progress.
+Decided custom element is still worthwhile for consistency and future-proofing.
+
+This is now complete.
+
+### Legend/Color Scale Display
+
+The colors currently displayed come from a hardcoded set of values in the `globals.js` file, and are sourced from the NOAA precipitation visualization scheme.
+
+The user is able to click on individual squares to see what value they represent, and this can be used to get a feel for the color scale, but it is not ideal.
+
+Like the NOAA visualization, a legend or color scale would be preferable.
+
+Currently, there is a prototype system in place, but disabled, in the `components/threshold_legend_element.js` file. This component dynamically generates a legend based on a list of threshold values and corresponding colors.
+
+The implementation is 'complete', but is not polished or particularly user-friendly at this time.
+
+Matching the legend to the size of the map container is proving difficult, as displaying 15 discrete color blocks results in small changes to spacing having a disproportionately large effect on the overall height of the legend.
+
+Manual tuning *would* be possible, but breaks in the case of the map resizing for any reason, as well as breaking if the number of thresholds is changed.
+
+This is a work in progress.
