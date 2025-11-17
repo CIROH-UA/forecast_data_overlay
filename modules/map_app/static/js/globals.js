@@ -69,7 +69,8 @@ var local_cache = {
     lead_time: null,
     forecast_cycle: null,
     lead_time_end: null,
-    range_mode: null
+    range_mode: null,
+    runtype: null,
 };
 
 /**
@@ -184,8 +185,9 @@ var data_source_options = {
             label: "Forecast Cycle"
         },
         lead_time: {
+            // 0, 1, 2
             min: 0,
-            max: 3,
+            max: 2,
             interval: 1,
             label: "'tm'(?)"
         }

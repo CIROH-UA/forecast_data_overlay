@@ -61,7 +61,7 @@ var time_config_config = {
  * @property {number} forecast_cycle - The forecast cycle value
  * @property {boolean|null} range_mode - True if range mode is enabled, false otherwise
  * @property {number|null} lead_time_end - The lead time end value (only if range mode)
- * @property {string|null} run_type - The run type (e.g., 'short_range', 'medium_range')
+ * @property {string|null} runtype - The run type (e.g., 'short_range', 'medium_range')
  */
 
 /**
@@ -106,7 +106,7 @@ class time_config extends HTMLElement {
         this.fullResDownloadCallbacks = new CallbackDict();
 
         // Data attributes
-        this.run_type = time_config_config.run_type_default; // expected to be 'short_range'
+        this.runtype = time_config_config.run_type_default; // expected to be 'short_range'
         this.target_time = time_config_config.target_time_default_date; // expected to be '2025-07-04'
         this.lead_time = time_config_config.lead_time_default; // expected to be 1
         this.forecast_cycle = time_config_config.forecast_cycle_default; // expected to be 0
@@ -185,8 +185,11 @@ class time_config extends HTMLElement {
      * @param {string} value - The selected run type
      */
     selectRunType(value) {
-        this.run_type = value;
+        this.runtype = value;
         this.runTypeElement.value = value;
+        var option = data_source_options[value];
+        this.reconfigureLeadTimeConstraints(option.lead_time.min, option.lead_time.max, option.lead_time.interval);
+        this.reconfigureForecastCycleConstraints(option.forecast_cycle.min, option.forecast_cycle.max, option.forecast_cycle.interval);
     }
 
     /**
@@ -323,7 +326,7 @@ class time_config extends HTMLElement {
     }
 
     /**
-     * Update run_type selection options based on data source options
+     * Update runtype selection options based on data source options
      */
     updateRunTypeOptions() {
         // Clear existing options
@@ -372,7 +375,7 @@ class time_config extends HTMLElement {
             forecast_cycle: this.selected_forecast_cycle,
             range_mode: this.selected_range_mode,
             lead_time_end: this.selected_lead_time_end,
-            run_type: this.selected_run_type
+            runtype: this.selected_run_type
         });
     }
 
@@ -381,7 +384,7 @@ class time_config extends HTMLElement {
      * Will be called from the resume functionality.
      * @param {timeConfigArgs} param0 - Object containing the values to set
      */
-    externallySetPreviousValues({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null, run_type=null}={}) {
+    externallySetPreviousValues({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null, runtype=null}={}) {
         this.selected_target_time = target_time;
         this.selected_lead_time = lead_time;
         this.selected_forecast_cycle = forecast_cycle;
@@ -391,8 +394,8 @@ class time_config extends HTMLElement {
         if (lead_time_end !== null) {
             this.selected_lead_time_end = lead_time_end;
         }
-        if (run_type !== null) {
-            this.selected_run_type = run_type;
+        if (runtype !== null) {
+            this.selected_run_type = runtype;
         } else {
             // Assume default if not provided
             this.selected_run_type = time_config_config.run_type_default;
@@ -405,7 +408,7 @@ class time_config extends HTMLElement {
      * Will be called from the resume functionality.
      * @param {timeConfigArgs} param0 - Object containing the values to set
      */
-    externallySetInputValues({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null, run_type=null}={}) {
+    externallySetInputValues({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null, runtype=null}={}) {
         this.selectTargetTime(target_time);
         this.selectLeadTime(lead_time);
         this.selectForecastCycle(forecast_cycle);
@@ -415,8 +418,8 @@ class time_config extends HTMLElement {
         if (lead_time_end !== null) {
             this.selectLeadTimeEnd(lead_time_end);
         }
-        if (run_type !== null) {
-            this.selectRunType(run_type);
+        if (runtype !== null) {
+            this.selectRunType(runtype);
         } else {
             // Assume default if not provided
             this.selectRunType(time_config_config.run_type_default);
@@ -428,14 +431,14 @@ class time_config extends HTMLElement {
      * Will be called from the resume functionality.
      * @param {timeConfigArgs} param0 - Object containing the values to set
      */
-    externallySetFull({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null, run_type=null}={}) {
-        this.externallySetPreviousValues({target_time, lead_time, forecast_cycle, range_mode, lead_time_end, run_type});
-        this.externallySetInputValues({target_time, lead_time, forecast_cycle, range_mode, lead_time_end, run_type});
+    externallySetFull({target_time, lead_time, forecast_cycle, range_mode=null, lead_time_end=null, runtype=null}={}) {
+        this.externallySetPreviousValues({target_time, lead_time, forecast_cycle, range_mode, lead_time_end, runtype});
+        this.externallySetInputValues({target_time, lead_time, forecast_cycle, range_mode, lead_time_end, runtype});
     }
 
     /**
-     * Build the run_type segment of the component
-     * @returns {HTMLDivElement} The run_type segment element
+     * Build the runtype segment of the component
+     * @returns {HTMLDivElement} The runtype segment element
      */
     buildRunTypeSegment() {
         // Run type input
@@ -900,7 +903,7 @@ class time_config extends HTMLElement {
     configureSubmitButton() {
         this.submitButton.addEventListener('click', () => {
             // On submit, update the selected values display
-            this.selected_run_type = this.run_type;
+            this.selected_run_type = this.runtype;
             this.selected_target_time = this.target_time;
             this.selected_range_mode = this.range_mode;
             this.selected_lead_time = this.lead_time;
@@ -922,7 +925,7 @@ class time_config extends HTMLElement {
                     lead_time_end: this.selected_lead_time_end,
                     forecast_cycle: this.selected_forecast_cycle,
                     range_mode: this.selected_range_mode,
-                    run_type: this.selected_run_type
+                    runtype: this.selected_run_type
                 });
             } else {
                 // this.triggerOnSubmit({
@@ -936,7 +939,7 @@ class time_config extends HTMLElement {
                     lead_time: this.selected_lead_time,
                     forecast_cycle: this.selected_forecast_cycle,
                     range_mode: this.selected_range_mode,
-                    run_type: this.selected_run_type
+                    runtype: this.selected_run_type
                 });
             }
         });
@@ -969,7 +972,7 @@ class time_config extends HTMLElement {
                 lead_time_end: this.selected_lead_time_end,
                 forecast_cycle: this.selected_forecast_cycle,
                 range_mode: this.selected_range_mode,
-                run_type: this.selected_run_type
+                runtype: this.selected_run_type
             });
         });
     }
@@ -994,7 +997,7 @@ class time_config extends HTMLElement {
                 lead_time_end: this.selected_lead_time_end,
                 forecast_cycle: this.selected_forecast_cycle,
                 range_mode: this.selected_range_mode,
-                run_type: this.selected_run_type
+                runtype: this.selected_run_type
             });
         });
     }

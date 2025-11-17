@@ -30,6 +30,7 @@ from forecasting_data.forcing_datasets import (
     load_forecasted_dataset_with_options,
     save_forecasted_dataset_with_options,
 )
+from forecasting_data.urlgen_enums import NWMRun, NWMVar, NWMGeo, NWMMem
 
 from time import perf_counter
 from numpy import isclose, isnan
@@ -342,7 +343,7 @@ def tryget_resume_session():
         return jsonify({"error": "No session data found"}), 404
 
 
-from views_utils import get_endpoint_request_obj, parse_request_args, forecast_precip_args
+from map_app.views_utils import get_endpoint_request_obj, parse_request_args, forecast_precip_args
 
 
 @main.route("/test_request", methods=["POST"])
@@ -372,6 +373,7 @@ def get_forecast_precip():
     colMax: Optional[int] = parsed_args["colMax"]
     lead_time_end: Optional[int] = parsed_args["lead_time_end"]
     range_mode: bool = parsed_args["range_mode"]
+    runtype: NWMRun = parsed_args["runtype"]
     t1 = perf_counter()  # After reading request data / intra_module_db
     if t1 - t0 > 1.0:
         print(f"Reading and parsing request data took {t1 - t0:.2f} seconds")
@@ -469,6 +471,7 @@ def download_forecast_precip():
     colMax: Optional[int] = parsed_args["colMax"]
     lead_time_end: Optional[int] = parsed_args["lead_time_end"]
     range_mode: bool = parsed_args["range_mode"]
+    runtype: NWMRun = parsed_args["runtype"]
     t1 = perf_counter()  # After reading request data / intra_module_db
     if t1 - t0 > 1.0:
         print(f"Reading and parsing request data took {t1 - t0:.2f} seconds")

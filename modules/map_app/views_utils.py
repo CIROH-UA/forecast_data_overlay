@@ -28,6 +28,7 @@ from forecasting_data.forcing_datasets import (
     get_timestep_data_for_frontend,
     get_timesteps_data_for_frontend,
 )
+from forecasting_data.urlgen_enums import NWMRun, NWMVar, NWMGeo, NWMMem
 
 from time import perf_counter
 from numpy import isclose, isnan
@@ -35,6 +36,24 @@ from numpy import isclose, isnan
 # views_utils.py
 # Store implementation of views.py functionality here so
 # that views.py can focus on routing and endpoint definitions.
+
+
+def run_type_cast(run_type_str: str) -> NWMRun:
+    """
+    Cast a string representation of run type to the corresponding NWMRun enum.
+
+    Args:
+        run_type_str: String representation of the run type.
+    Returns:
+        Corresponding NWMRun enum value.
+    Raises:
+        ValueError: If the provided string does not match any NWMRun enum.
+    """
+    for run in NWMRun:
+        if run.name.lower() == run_type_str.lower():
+            return run
+    raise ValueError(f"Invalid run type: {run_type_str}")
+
 
 # (argument name, type, {optional parameters})
 # {
@@ -56,6 +75,7 @@ forecast_precip_args: List[FuncArgTuple] = [
     ("colMax", int, {"default": None, "type_cast": True}),
     ("lead_time_end", int, {"default": None, "type_cast": True}),
     ("range_mode", bool, {"default": False, "type_cast": True}),
+    ("runtype", NWMRun, {"default": NWMRun.SHORT_RANGE, "type_cast": run_type_cast}),
 ]
 
 
