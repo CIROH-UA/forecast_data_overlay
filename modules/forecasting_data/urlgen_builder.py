@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import requests
+
 if __name__ == "__main__":
     import sys
 
     sys.path.append("./modules/")
+from time import perf_counter
 from typing import (
     List,
     Tuple,
@@ -19,7 +22,7 @@ from typing import (
 )
 
 from dateutil import rrule
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from itertools import product
 import os
 
@@ -646,3 +649,51 @@ def generate_url_single(
     )
 
     return f"{urlbase_prefix}{partial_filepath}"
+
+
+def find_most_recent_file(
+    runinput: NWMRun,
+    varinput: NWMVar,
+    geoinput: NWMGeo,
+    initial_datetime: datetime,
+    max_checks: int = 48,
+    verbose: bool = False,
+) -> Tuple[Optional[str], Optional[Tuple[str, int]], int]:
+    check_datetime = initial_datetime
+    checks_done = 0
+    while checks_done < max_checks:
+        if verbose:
+            t0_loop = perf_counter()
+        # date_str = date_to_str(check_datetime)
+        date_str = check_datetime.strftime("%Y%m%d")
+        fcst_cycle = check_datetime.hour
+        lead_time = 1 if runinput == NWMRun.SHORT_RANGE else 0
+        url = generate_url_single(
+            date=date_str,
+            fcst_cycle=fcst_cycle,
+            lead_time=lead_time,
+            runinput=runinput,
+            varinput=varinput,
+            geoinput=geoinput,
+        )
+        url = f"{url}.json"
+        if verbose:
+            t1_loop = perf_counter()
+        # found_url = check_url_exists(url)
+        response = requests.head(url)
+        found_url = response.status_code == 200
+        if verbose:
+            t2_loop = perf_counter()
+            print(
+                f"Checked URL: {url} | Found: {found_url} | "
+                f"URL gen time: {t1_loop - t0_loop:.3f}s | "
+                f"Check time: {t2_loop - t1_loop:.3f}s"
+            )
+        if found_url:
+            return url, (date_str, fcst_cycle), checks_done
+        # Move to the previous forecast cycle time
+        # check_datetime = prev_time(check_datetime, 1)
+        check_datetime -= timedelta(hours=1)
+        checks_done += 1
+    # No file found within the max_checks limit
+    return None, None, checks_done

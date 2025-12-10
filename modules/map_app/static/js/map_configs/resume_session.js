@@ -139,3 +139,63 @@ function fetchResumeSession() {
 // document.addEventListener('DOMContentLoaded', fetchResumeSession);
 // still too early, errors due to map not being ready
 map.on('load', fetchResumeSession);
+
+
+const enforceMostRecentForecastData = true;
+
+if (enforceMostRecentForecastData) {
+    const runtype = local_cache['runtype'] || 'short_range';
+    // Use the 'find_most_recent_file' endpoint to request the most
+    // recent forecast data file available
+    function forceMostRecentForecastData() {
+        fetch('/find_most_recent_file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                runtype: runtype,
+            },)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok, was ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Most recent forecast data file info received:', data);
+            if (data.date_str && data.forecast_cycle) {
+                // Update time config to use this most recent forecast data
+                var selectedTime = data.date_str;
+                // Received value is YYYYMMDD, convert it to YYYY-MM-DD
+                selectedTime = selectedTime.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+                var timeConfigArgs = {
+                    target_time: selectedTime,
+                    forecast_cycle: data.forecast_cycle,
+                    lead_time: 1,
+                    range_mode: true,
+                    lead_time_end: 18
+                };
+                console.log('Enforcing most recent forecast data with time config args:', timeConfigArgs);
+                timeConfigElement.externallySetFull(timeConfigArgs);
+                // Also update local_cache
+                local_cache['target_time'] = data.date_str; // keep in YYYYMMDD format for requests
+                local_cache['forecast_cycle'] = data.forecast_cycle;
+                timeConfigElement.submitCallbacks.trigger({
+                    target_time: timeConfigElement.selected_target_time,
+                    lead_time: timeConfigElement.selected_lead_time || 1,
+                    forecast_cycle: timeConfigElement.selected_forecast_cycle,
+                    range_mode: timeConfigElement.selected_range_mode,
+                    runtype: timeConfigElement.selected_run_type
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching most recent forecast data file info:', error);
+        });
+    }
+    map.on('load', () => {
+        // Delay slightly to ensure other on-load handlers complete first
+        setTimeout(forceMostRecentForecastData, 500);
+        // forceMostRecentForecastData();
+    });
+}

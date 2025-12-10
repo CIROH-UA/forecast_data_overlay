@@ -31,6 +31,7 @@ from forecasting_data.urlgen_builder import (
     make_partial_filepath,
     urlbasedict,
     generate_url_single,
+    find_most_recent_file,
 )
 
 if __name__ == "__main__":
@@ -85,7 +86,7 @@ if __name__ == "__main__":
         def prev_time(dt: datetime, hours: int) -> datetime:
             return dt - timedelta(hours=hours)
 
-        def find_most_recent_file(
+        def _find_most_recent_file(
             runinput: NWMRun,
             varinput: NWMVar,
             geoinput: NWMGeo,
@@ -123,7 +124,8 @@ if __name__ == "__main__":
                 if found_url:
                     return url, (date_str, fcst_cycle), checks_done
                 # Move to the previous forecast cycle time
-                check_datetime = prev_time(check_datetime, 1)
+                # check_datetime = prev_time(check_datetime, 1)
+                check_datetime -= timedelta(hours=1)
                 checks_done += 1
             # No file found within the max_checks limit
             return None, None, checks_done
