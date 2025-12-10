@@ -147,7 +147,12 @@ if (enforceMostRecentForecastData) {
     const runtype = local_cache['runtype'] || 'short_range';
     // Use the 'find_most_recent_file' endpoint to request the most
     // recent forecast data file available
+    // externalSetRegionValues(656, 1264, 1952, 2416);regionProperties
+    // select full map region
+    
     function forceMostRecentForecastData() {
+        externalSetRegionValues(0, 3840, 0, 4608);
+        sendSelectedRegion();
         fetch('/find_most_recent_file', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -185,7 +190,8 @@ if (enforceMostRecentForecastData) {
                     lead_time: timeConfigElement.selected_lead_time || 1,
                     forecast_cycle: timeConfigElement.selected_forecast_cycle,
                     range_mode: timeConfigElement.selected_range_mode,
-                    runtype: timeConfigElement.selected_run_type
+                    runtype: timeConfigElement.selected_run_type,
+                    lead_time_end: timeConfigElement.selected_lead_time_end
                 });
             }
         })
