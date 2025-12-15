@@ -75,7 +75,7 @@ var local_cache = {
         runtype: null,
         doRefresh: false,
         refreshRateSecs: 60,
-        startAnimated: true,
+        startAnimated: false,
         startAnimatedRateMs: 1000,
         lastEnforced: null,
         intervalID: null,

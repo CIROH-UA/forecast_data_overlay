@@ -155,10 +155,10 @@ function fetchResumeSession() {
 map.on('load', fetchResumeSession);
 
 
-const enforceMostRecentForecastData = true;
+const enforceMostRecentForecastData = false;
 // local_cache['recentDataEnforced'] = false;
 if (enforceMostRecentForecastData) {
-    const doRefresh = true;
+    const doRefresh = false;
     const refreshRateSecs = 60; // 1 minute
     const runtype = local_cache['runtype'] || 'short_range';
     // local_cache['recentDataEnforced'] = true;
@@ -175,6 +175,7 @@ if (enforceMostRecentForecastData) {
     local_cache.recentData.lastEnforced = null;
     local_cache.recentData.intervalID = null;
 
+    local_cache.recentData.startAnimated = true;
     // Use the 'find_most_recent_file' endpoint to request the most
     // recent forecast data file available
     // externalSetRegionValues(656, 1264, 1952, 2416);regionProperties
