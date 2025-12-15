@@ -532,6 +532,12 @@ function updateForecastedPrecipOverlay() {
             console.warn('No data received for forecasted precipitation.');
             return false;
         }
+    }).then(result => {
+        if (result) {
+            // Trigger any callbacks waiting for the forecasted precip layer to finish rendering
+            local_cache.finishedRenderingCallbacks.trigger();
+        }
+        return result;
     }).catch(error => {
         console.error('Error fetching forecasted precipitation data:', error);
     });

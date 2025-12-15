@@ -49,7 +49,6 @@ var map;
 var protocol;
 
 /**
- * @type {Object}
  * @description
  * Object to store local cache information, such as the current
  * view bounds, scale, and selected forecast parameters.
@@ -76,10 +75,16 @@ var local_cache = {
         runtype: null,
         doRefresh: false,
         refreshRateSecs: 60,
+        startAnimated: true,
+        startAnimatedRateMs: 1000,
         lastEnforced: null,
         intervalID: null,
     },
     lastRequestedCacheArgs: null,
+    /**
+     * @type {CallbackDict<Function>}
+     */
+    finishedRenderingCallbacks: new CallbackDict(),
 };
 
 /**

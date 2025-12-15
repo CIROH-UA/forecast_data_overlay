@@ -286,4 +286,26 @@ if (enforceMostRecentForecastData) {
             // forceMostRecentForecastData();
         });
     }
+    function startAnimationIfNeeded() {
+        if (!animationControlElement.showRangeSlider) {
+            return;
+        } else {
+            animationControlElement.playbackIntervalDuration = local_cache.recentData.startAnimatedRateMs || 1000;
+            animationControlElement.playbackIntervalInput.value = animationControlElement.playbackIntervalDuration;
+            if (animationControlElement.playbackIntervalId !== null) {
+                animationControlElement.stopPlayback();
+            }
+            animationControlElement.startPlayback();
+            animationControlElement.playButtonElement.checked = true;
+        }
+    }
+    if (local_cache.recentData.startAnimated) {
+        local_cache.finishedRenderingCallbacks.add(
+            'start-animation-after-recent-data-enforced',
+            () => {
+                // After data is loaded and rendered, start animation if needed
+                startAnimationIfNeeded();
+            }
+        );
+    }
 }
