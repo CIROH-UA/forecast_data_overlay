@@ -491,7 +491,8 @@ function updateForecastedPrecipOverlay() {
     const lead_time_end = local_cache["lead_time_end"];
     const range_mode = local_cache["range_mode"];
     const runtype = local_cache["runtype"];
-    return requestForecastedPrecip(
+    // return requestForecastedPrecip(
+    return requestForecastedPrecipWithCache(
         targetTime,
         leadTime,
         forecastCycle,
@@ -506,6 +507,10 @@ function updateForecastedPrecipOverlay() {
         runtype
     ).then(data => {
         if (data) {
+            if (data.skipped) {
+                console.log('Forecasted precipitation overlay update skipped:', data.message);
+                return true; // Consider skipped as successful
+            }
             // Update data_cache
             data_cache.geometry = data["geometries"];
             if (data["timestep_values"]) {
@@ -527,6 +532,12 @@ function updateForecastedPrecipOverlay() {
             console.warn('No data received for forecasted precipitation.');
             return false;
         }
+    }).then(result => {
+        if (result) {
+            // Trigger any callbacks waiting for the forecasted precip layer to finish rendering
+            local_cache.finishedRenderingCallbacks.trigger();
+        }
+        return result;
     }).catch(error => {
         console.error('Error fetching forecasted precipitation data:', error);
     });

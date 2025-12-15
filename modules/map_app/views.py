@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -31,6 +31,7 @@ from forecasting_data.forcing_datasets import (
     save_forecasted_dataset_with_options,
 )
 from forecasting_data.urlgen_enums import NWMRun, NWMVar, NWMGeo, NWMMem
+from forecasting_data.urlgen_builder import find_most_recent_file
 
 from time import perf_counter
 from numpy import isclose, isnan
@@ -627,3 +628,46 @@ def download_forecast_precip():
     logger.info(success_message)
     # return jsonify({"message": "Files saved successfully"}), 200
     return jsonify({"message": success_message}), 200
+
+
+@main.route("/find_most_recent_file", methods=["POST"])
+def find_most_recent_file_args():
+    """Find the most recent forecast file given the input arguments."""
+    request_data = get_endpoint_request_obj()
+    date_str: str = request_data.get("date_str", None)
+    runtype: str = request_data.get("runtype", "short_range")
+    runinput = NWMRun[runtype.upper()]
+    max_checks: int = request_data.get("max_checks", 48)
+    initial_datetime = None
+    if date_str is not None:
+        try:
+            initial_datetime = datetime.strptime(date_str, "%Y%m%d")
+        except ValueError:
+            return jsonify({"error": "Invalid date_str format, expected YYYYMMDD"}), 400
+    else:
+        initial_datetime = datetime.now(timezone.utc)
+    url, found_tuple, checks_done = find_most_recent_file(
+        runinput=runinput,
+        varinput=NWMVar.FORCING,
+        geoinput=NWMGeo.CONUS,
+        initial_datetime=initial_datetime,
+        max_checks=max_checks,
+    )
+    if url is not None:
+        response = {
+            "url": url,
+            "date_str": found_tuple[0],
+            "forecast_cycle": found_tuple[1],
+            "checks_done": checks_done,
+        }
+        return jsonify(response), 200
+    else:
+        return (
+            jsonify(
+                {
+                    "error": f"No file found within {max_checks} checks",
+                    "checks_done": checks_done,
+                }
+            ),
+            404,
+        )

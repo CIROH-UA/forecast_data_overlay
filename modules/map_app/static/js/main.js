@@ -181,3 +181,71 @@ function downloadNetcdfData(
             return null;
         });
 }
+
+/**
+ * Generalized function to request forecasted precipitation data from the server.
+ * 
+ * Variant that checks if the arguments match the most recent request
+ * to avoid redundant requests.
+ */
+function requestForecastedPrecipWithCache(
+    selected_time,
+    lead_time,
+    forecast_cycle,
+    scaleX = null,
+    scaleY = null,
+    rowMin = null,
+    rowMax = null,
+    colMin = null,
+    colMax = null,
+    lead_time_end = null,
+    range_mode = null,
+    runtype = null
+) {
+    // Check if the requested parameters match the cached ones
+    if (scaleX === null) {
+        scaleX = 16;
+    }
+    if (scaleY === null) {
+        scaleY = 16;
+    }
+    var currentArgs = {
+        selected_time: selected_time,
+        lead_time: lead_time,
+        forecast_cycle: forecast_cycle,
+        scaleX: scaleX,
+        scaleY: scaleY,
+        rowMin: rowMin,
+        rowMax: rowMax,
+        colMin: colMin,
+        colMax: colMax,
+        lead_time_end: lead_time_end,
+        range_mode: range_mode,
+        runtype: runtype
+    };
+    if (JSON.stringify(currentArgs) === JSON.stringify(local_cache.lastRequestedCacheArgs)) {
+        console.log('Request parameters match cached request, skipping new request.');
+        return Promise.resolve({
+            skipped: true,
+            message: 'Request parameters match cached request, no new data fetched.'
+        });
+    } else {
+        // Update the cached arguments
+        local_cache.lastRequestedCacheArgs = currentArgs;
+        // Proceed with the data request
+        return requestForecastedPrecip(
+            selected_time,
+            lead_time,
+            forecast_cycle,
+            scaleX,
+            scaleY,
+            rowMin,
+            rowMax,
+            colMin,
+            colMax,
+            lead_time_end,
+            range_mode,
+            runtype
+        );
+    }
+}
