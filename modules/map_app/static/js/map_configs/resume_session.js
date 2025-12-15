@@ -5,8 +5,12 @@ function updateWithResumedSession(data) {
         console.error('No data received for resumed session.');
         return;
     }
+    // make a copy of the data without the forcing data dict for logging
+    var data_copy = Object.assign({}, data);
+    delete data_copy['forecasted_forcing_data_dict'];
+    console.log('Resuming session with data:', data_copy);
     // Update time config using the new component
-    if (data.selected_time || data.lead_time || data.forecast_cycle) {
+    if (data.selected_time != null || data.lead_time != null || data.forecast_cycle != null) {
         var timeConfigArgs = {};
         if (data.selected_time != null) {
             var selectedTime = data.selected_time;
@@ -51,7 +55,13 @@ function updateWithResumedSession(data) {
             yScale: data.scaleY || null
         });
     }
-    if (data.rowMin && data.rowMax && data.colMin && data.colMax) {
+    if (data.rowMin != null && data.rowMax != null && data.colMin != null && data.colMax != null) {
+        console.log('Resuming session with region bounds:', {
+            rowMin: data.rowMin,
+            rowMax: data.rowMax,
+            colMin: data.colMin,
+            colMax: data.colMax
+        });
         externalSetRegionBounds(
             data.regionRowMin, data.regionRowMax,
             data.regionColMin, data.regionColMax,
@@ -61,7 +71,9 @@ function updateWithResumedSession(data) {
             data.rowMin, data.rowMax,
             data.colMin, data.colMax
         )
+        sendSelectedRegion();
     }
+    
     function truncPrintArray(arr, maxLen=3) {
         if (arr.length > maxLen) {
             return arr.slice(0, maxLen).concat(['... (truncated from ' + arr.length + ' total)']);
@@ -142,17 +154,24 @@ map.on('load', fetchResumeSession);
 
 
 const enforceMostRecentForecastData = true;
-local_cache['recentDataEnforced'] = false;
+// local_cache['recentDataEnforced'] = false;
 if (enforceMostRecentForecastData) {
     const doRefresh = true;
+    const refreshRateSecs = 60; // 1 minute
     const runtype = local_cache['runtype'] || 'short_range';
-    local_cache['recentDataEnforced'] = true;
-    local_cache['recentDataRuntype'] = runtype;
+    // local_cache['recentDataEnforced'] = true;
+    // local_cache['recentDataRuntype'] = runtype;
 
-    local_cache['recentDataDoRefresh'] = doRefresh;
-    local_cache['recentDataRefreshRateSecs'] = 60; // 1 minute
-    local_cache['recentDataLastEnforced'] = null;
-    local_cache['recentDataIntervalID'] = null;
+    // local_cache['recentDataDoRefresh'] = doRefresh;
+    // local_cache['recentDataRefreshRateSecs'] = 60; // 1 minute
+    // local_cache['recentDataLastEnforced'] = null;
+    // local_cache['recentDataIntervalID'] = null;
+    local_cache.recentData.enforced = true;
+    local_cache.recentData.runtype = runtype;
+    local_cache.recentData.doRefresh = doRefresh;
+    local_cache.recentData.refreshRateSecs = refreshRateSecs;
+    local_cache.recentData.lastEnforced = null;
+    local_cache.recentData.intervalID = null;
 
     // Use the 'find_most_recent_file' endpoint to request the most
     // recent forecast data file available
@@ -202,33 +221,62 @@ if (enforceMostRecentForecastData) {
                     runtype: timeConfigElement.selected_run_type,
                     lead_time_end: timeConfigElement.selected_lead_time_end
                 });
-                local_cache['recentDataLastEnforced'] = new Date();
+                // local_cache['recentDataLastEnforced'] = new Date();
+                local_cache.recentData.lastEnforced = new Date();
             }
         })
         .catch(error => {
             console.error('Error fetching most recent forecast data file info:', error);
         });
     }
+    var recentDataLoopFuncs = {
+        clearLoop: null,
+        setupLoop: null,
+        stepLoop: null,
+    };
     function clearMostRecentForecastDataInterval() {
-        if (local_cache['recentDataIntervalID'] !== null) {
-            clearInterval(local_cache['recentDataIntervalID']);
-            local_cache['recentDataIntervalID'] = null;
+        if (local_cache.recentData.intervalID !== null) {
+            clearInterval(local_cache.recentData.intervalID);
+            local_cache.recentData.intervalID = null;
             console.log('Cleared most recent forecast data enforcement interval.');
         }
     }
+    recentDataLoopFuncs.clearLoop = clearMostRecentForecastDataInterval;
+    function recentForecastDataLoop() {
+        if (local_cache.recentData.intervalID === null) {
+            if (local_cache.recentData.doRefresh) {
+                // If loop not already running, start it
+                // setupMostRecentForecastDataInterval();
+                recentDataLoopFuncs.setupLoop();
+            }
+        } else {
+            if (!local_cache.recentData.doRefresh) {
+                // If loop is running but should not be, clear it
+                // clearMostRecentForecastDataInterval();
+                recentDataLoopFuncs.clearLoop();
+                return;
+            }
+        }
+        // Force update to most recent forecast data
+        forceMostRecentForecastData();
+    }
+    recentDataLoopFuncs.stepLoop = recentForecastDataLoop;
     function setupMostRecentForecastDataInterval() {
-        if (local_cache['recentDataIntervalID'] === null) {
+        if (local_cache.recentData.intervalID === null) {
             const intervalID = setInterval(() => {
-                forceMostRecentForecastData();
-            }, local_cache['recentDataRefreshRateSecs'] * 1000);
-            local_cache['recentDataIntervalID'] = intervalID;
+                // forceMostRecentForecastData();
+                recentDataLoopFuncs.stepLoop();
+            }, local_cache.recentData.refreshRateSecs * 1000);
+            local_cache.recentData.intervalID = intervalID;
             console.log('Set up most recent forecast data enforcement interval with ID:', intervalID);
         }
     }
+    recentDataLoopFuncs.setupLoop = setupMostRecentForecastDataInterval;
     if (doRefresh) {
         map.on('load', () => {
             // Delay slightly to ensure other on-load handlers complete first
-            setTimeout(setupMostRecentForecastDataInterval, 500);
+            // setTimeout(setupMostRecentForecastDataInterval, 500);
+            setTimeout(recentDataLoopFuncs.setupLoop, 500);
             // setupMostRecentForecastDataInterval();
         });
     } else {

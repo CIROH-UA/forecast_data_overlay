@@ -71,6 +71,15 @@ var local_cache = {
     lead_time_end: null,
     range_mode: null,
     runtype: null,
+    recentData: {
+        enforced: false,
+        runtype: null,
+        doRefresh: false,
+        refreshRateSecs: 60,
+        lastEnforced: null,
+        intervalID: null,
+    },
+    lastRequestedCacheArgs: null,
 };
 
 /**
