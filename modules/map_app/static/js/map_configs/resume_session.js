@@ -119,6 +119,8 @@ function updateWithResumedSession(data) {
             };
         }
         updateForecastLayer(data_forcing_dict);
+        // Trigger any callbacks waiting for the forecasted precip layer to finish rendering
+        local_cache.finishedRenderingCallbacks.trigger();
     }
     // If there are any other session data to resume, handle them here
 }
