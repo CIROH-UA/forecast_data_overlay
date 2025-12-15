@@ -142,9 +142,18 @@ map.on('load', fetchResumeSession);
 
 
 const enforceMostRecentForecastData = true;
-
+local_cache['recentDataEnforced'] = false;
 if (enforceMostRecentForecastData) {
+    const doRefresh = true;
     const runtype = local_cache['runtype'] || 'short_range';
+    local_cache['recentDataEnforced'] = true;
+    local_cache['recentDataRuntype'] = runtype;
+
+    local_cache['recentDataDoRefresh'] = doRefresh;
+    local_cache['recentDataRefreshRateSecs'] = 60; // 1 minute
+    local_cache['recentDataLastEnforced'] = null;
+    local_cache['recentDataIntervalID'] = null;
+
     // Use the 'find_most_recent_file' endpoint to request the most
     // recent forecast data file available
     // externalSetRegionValues(656, 1264, 1952, 2416);regionProperties
@@ -193,15 +202,40 @@ if (enforceMostRecentForecastData) {
                     runtype: timeConfigElement.selected_run_type,
                     lead_time_end: timeConfigElement.selected_lead_time_end
                 });
+                local_cache['recentDataLastEnforced'] = new Date();
             }
         })
         .catch(error => {
             console.error('Error fetching most recent forecast data file info:', error);
         });
     }
-    map.on('load', () => {
-        // Delay slightly to ensure other on-load handlers complete first
-        setTimeout(forceMostRecentForecastData, 500);
-        // forceMostRecentForecastData();
-    });
+    function clearMostRecentForecastDataInterval() {
+        if (local_cache['recentDataIntervalID'] !== null) {
+            clearInterval(local_cache['recentDataIntervalID']);
+            local_cache['recentDataIntervalID'] = null;
+            console.log('Cleared most recent forecast data enforcement interval.');
+        }
+    }
+    function setupMostRecentForecastDataInterval() {
+        if (local_cache['recentDataIntervalID'] === null) {
+            const intervalID = setInterval(() => {
+                forceMostRecentForecastData();
+            }, local_cache['recentDataRefreshRateSecs'] * 1000);
+            local_cache['recentDataIntervalID'] = intervalID;
+            console.log('Set up most recent forecast data enforcement interval with ID:', intervalID);
+        }
+    }
+    if (doRefresh) {
+        map.on('load', () => {
+            // Delay slightly to ensure other on-load handlers complete first
+            setTimeout(setupMostRecentForecastDataInterval, 500);
+            // setupMostRecentForecastDataInterval();
+        });
+    } else {
+        map.on('load', () => {
+            // Delay slightly to ensure other on-load handlers complete first
+            setTimeout(forceMostRecentForecastData, 500);
+            // forceMostRecentForecastData();
+        });
+    }
 }
